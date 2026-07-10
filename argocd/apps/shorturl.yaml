@@ -1,0 +1,24 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: shorturl
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/mykyta-kravchenko98/shorturl-gitops.git
+    targetRevision: main
+    path: helm/shorturl
+    helm:
+      valueFiles:
+        - values.yaml
+        - values-local.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: shorturl
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
