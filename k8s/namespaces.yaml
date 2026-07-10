@@ -1,0 +1,25 @@
+# Namespaces created up front (rather than left to `syncOptions:
+# CreateNamespace=true`) because the shorturl namespace needs a label the
+# otel-sidecar-injector's MutatingWebhookConfiguration selects on -
+# CreateNamespace alone won't add it.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: shorturl
+  labels:
+    otel-injection: enabled
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: observability
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: otel-sidecar-injector
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cert-manager

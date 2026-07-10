@@ -1,0 +1,38 @@
+# Cluster-wide collector gateway: every sidecar forwards here, this is the
+# one place that needs backend exporters configured. Ships with a `debug`
+# exporter so logs/traces/metrics are visible via
+# `kubectl -n observability logs deploy/otel-collector-gateway` out of the
+# box - swap/add exporters (Loki, Tempo, Prometheus remote-write, etc.) here
+# once project #2 needs a real backend to query against.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-collector-gateway-config
+  namespace: observability
+data:
+  config.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+
+    processors:
+      batch: {}
+
+    exporters:
+      debug:
+        verbosity: normal
+
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [debug]
+        metrics:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [debug]
