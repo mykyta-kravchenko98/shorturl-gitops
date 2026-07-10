@@ -1,0 +1,55 @@
+{{- if .Values.postgres.deployed }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: postgres-migrate
+  labels:
+    {{- include "shorturl.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: shorturl
+        app.kubernetes.io/component: postgres-migrate
+    spec:
+      restartPolicy: Never
+      initContainers:
+        - name: wait-for-postgres
+          image: "{{ .Values.postgres.image }}"
+          envFrom:
+            - secretRef:
+                name: postgres-credentials
+          command:
+            - sh
+            - -c
+            - |
+              until pg_isready -h {{ .Values.postgres.host }} -p {{ .Values.postgres.port }} -U "$POSTGRES_USER" -d "$POSTGRES_DB"; do
+                echo "waiting for postgres..."
+                sleep 2
+              done
+      containers:
+        - name: migrate
+          image: migrate/migrate:v4.17.1
+          envFrom:
+            - secretRef:
+                name: postgres-credentials
+          command:
+            - sh
+            - -c
+            - |
+              migrate -path=/migrations \
+                -database "postgres://$POSTGRES_USER:$POSTGRES_PASSWORD@{{ .Values.postgres.host }}:{{ .Values.postgres.port }}/$POSTGRES_DB?sslmode={{ .Values.postgres.sslMode }}" \
+                up
+          volumeMounts:
+            - name: migrations
+              mountPath: /migrations
+      volumes:
+        - name: migrations
+          configMap:
+            name: postgres-migrations
+{{- end }}

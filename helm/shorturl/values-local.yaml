@@ -1,0 +1,9 @@
+# Overrides applied on top of values.yaml for the local kind environment.
+replicaCount: 1
+
+image:
+  tag: latest
+  pullPolicy: IfNotPresent
+
+autoscaling:
+  enabled: false
