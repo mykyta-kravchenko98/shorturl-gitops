@@ -1,0 +1,8 @@
+gitops_repo_url = "https://github.com/mykyta-kravchenko98/shorturl-gitops.git"
+target_revision = "main"
+
+# Leave commented (defaults to 127.0.0.1) to only access the cluster from
+# this machine. Uncomment and set to this machine's LAN IP (ipconfig ->
+# "IPv4 Address") to drive it from a laptop on the same WiFi - see
+# docs/SETUP.md "Remote access over LAN".
+# api_server_address = "192.168.1.50"
