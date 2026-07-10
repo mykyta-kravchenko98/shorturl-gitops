@@ -1,0 +1,60 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/mykyta-kravchenko98/shorturl
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  port: 8585
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    memory: 128Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 75
+
+otel:
+  sidecarInject: true
+  sidecarImage: otel/opentelemetry-collector-contrib:0.105.0
+  gatewayEndpoint: otel-collector-gateway.observability.svc.cluster.local:4317
+
+postgres:
+  # When true, this chart also deploys Postgres itself (plain StatefulSet,
+  # no operator - see templates/postgres-*.yaml). Set false and point
+  # `host` at an external instance (e.g. a managed DB) instead.
+  deployed: true
+  image: postgres:16-alpine
+  storage: 1Gi
+  host: postgres
+  port: "5432"
+  user: user
+  password: password
+  dbName: ShortURLDataDB
+  sslMode: disable
+
+server:
+  restPort: "8585"
+  dataCenterId: 1
+  machineId: 1
+
+ingress:
+  enabled: false
+  host: shorturl.local
+
+metrics:
+  serviceMonitor:
+    enabled: false
+
+probes:
+  liveness:
+    path: /healthz
+  readiness:
+    path: /readyz

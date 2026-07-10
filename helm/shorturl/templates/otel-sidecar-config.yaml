@@ -1,0 +1,37 @@
+{{- if .Values.otel.sidecarInject }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-sidecar-config
+  labels:
+    {{- include "shorturl.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+
+    processors:
+      batch: {}
+
+    exporters:
+      otlp/gateway:
+        endpoint: {{ .Values.otel.gatewayEndpoint }}
+        tls:
+          insecure: true
+
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [otlp/gateway]
+        metrics:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [otlp/gateway]
+{{- end }}

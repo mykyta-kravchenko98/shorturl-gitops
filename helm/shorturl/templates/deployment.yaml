@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "shorturl.fullname" . }}
+  labels:
+    {{- include "shorturl.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "shorturl.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "shorturl.selectorLabels" . | nindent 8 }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- if .Values.otel.sidecarInject }}
+        checksum/otel-sidecar-config: {{ include (print $.Template.BasePath "/otel-sidecar-config.yaml") . | sha256sum }}
+        {{- end }}
+    spec:
+      containers:
+        - name: shorturl
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.server.restPort }}
+          env:
+            - name: environment
+              value: "prod"
+          volumeMounts:
+            - name: config
+              mountPath: /app/config/config.yml
+              subPath: config.yml
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.probes.liveness.path }}
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.probes.readiness.path }}
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+        {{- if .Values.otel.sidecarInject }}
+        - name: otel-collector-sidecar
+          image: "{{ .Values.otel.sidecarImage }}"
+          args: ["--config=/etc/otel/config.yaml"]
+          ports:
+            - name: otlp-grpc
+              containerPort: 4317
+            - name: otlp-http
+              containerPort: 4318
+          resources:
+            requests:
+              cpu: 20m
+              memory: 64Mi
+            limits:
+              memory: 128Mi
+          volumeMounts:
+            - name: otel-sidecar-config
+              mountPath: /etc/otel
+              readOnly: true
+        {{- end }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "shorturl.fullname" . }}-config
+        {{- if .Values.otel.sidecarInject }}
+        - name: otel-sidecar-config
+          configMap:
+            name: otel-sidecar-config
+        {{- end }}
