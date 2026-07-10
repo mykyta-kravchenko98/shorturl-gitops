@@ -1,0 +1,11 @@
+.terraform/
+*.tfstate
+*.tfstate.*
+terraform.tfvars
+controller/hack/certs/
+/.idea/.gitignore
+/.idea/encodings.xml
+/.idea/go.imports.xml
+/.idea/modules.xml
+/.idea/shorturl-gitops.iml
+/.idea/vcs.xml
