@@ -1,0 +1,43 @@
+# MegaLinter config - see https://megalinter.io/latest/config-file/
+# Deliberately an allow-list (ENABLE_LINTERS) rather than the default
+# "everything on" - this repo is Helm/Terraform/k8s/shell, not a general
+# app codebase, so most of MegaLinter's ~100 linters don't apply.
+
+# Only lint what's actually relevant here.
+ENABLE_LINTERS:
+  - KUBERNETES_HELM          # helm lint on helm/shorturl
+  - KUBERNETES_KUBECONFORM   # schema-validates rendered/raw k8s YAML
+  - TERRAFORM_TFLINT
+  - TERRAFORM_TERRAFORM_FMT
+  - TERRAFORM_CHECKOV        # security misconfig scan (Terraform)
+  - YAML_YAMLLINT
+  - DOCKERFILE_HADOLINT      # controller/Dockerfile, if/when that repo exists here
+  - BASH_SHELLCHECK          # scripts/*.sh, controller/hack/*.sh
+  - REPOSITORY_GITLEAKS      # secret scanning across the whole diff
+  - MARKDOWN_MARKDOWNLINT
+
+SHOW_ELAPSED_TIME: true
+FILEIO_REPORTER: false
+PRINT_ALPACA: false
+
+FILTER_REGEX_EXCLUDE: "(\\.idea/|\\.git/)"
+
+# helm lint needs chart deps resolvable - no external deps here, so this
+# is mostly a no-op, but keep it explicit.
+KUBERNETES_HELM_ARGUMENTS: "--strict"
+
+# kubeconform doesn't know about custom CRDs (Application, MutatingWebhook-
+# Configuration webhooks, cert-manager Certificate) - skip schema errors on
+# kinds it can't resolve instead of failing the whole job on those.
+KUBERNETES_KUBECONFORM_ARGUMENTS:
+  - "-ignore-missing-schemas"
+
+# Files under helm/*/templates/ contain Go template syntax ({{ ... }}) and
+# are NOT valid standalone YAML/k8s manifests - only KUBERNETES_HELM (helm
+# lint, which understands the templating) should touch them. yamllint and
+# kubeconform need the rendered/raw output, not the template source, so
+# they're excluded from that one directory pattern.
+YAML_YAMLLINT_FILTER_REGEX_EXCLUDE: "helm/.*/templates/"
+KUBERNETES_KUBECONFORM_FILTER_REGEX_EXCLUDE: "helm/.*/templates/"
+
+YAML_YAMLLINT_CONFIG_FILE: ".yamllint.yml"
