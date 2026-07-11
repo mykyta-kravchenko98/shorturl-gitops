@@ -1,7 +1,7 @@
 replicaCount: 1
 
 image:
-  repository: ghcr.io/mykyta-kravchenko98/shorturl
+  repository: 528081867341.dkr.ecr.eu-central-1.amazonaws.com/shorturl
   tag: latest
   pullPolicy: IfNotPresent
 
@@ -39,6 +39,18 @@ postgres:
   password: password
   dbName: ShortURLDataDB
   sslMode: disable
+
+  migrateImage:
+    repository: 528081867341.dkr.ecr.eu-central-1.amazonaws.com/shorturl-migrate
+    tag: latest
+
+ecrPull:
+  enabled: true
+  region: eu-central-1
+  registry: 528081867341.dkr.ecr.eu-central-1.amazonaws.com
+  secretName: ecr-pull-secret
+  credentialsSecretName: aws-ecr-credentials
+  schedule: "0 */10 * * *"
 
 server:
   restPort: "8585"
