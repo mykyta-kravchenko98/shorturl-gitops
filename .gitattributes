@@ -1,0 +1,5 @@
+# Force LF line endings for shell scripts regardless of git's autocrlf
+# setting - a CRLF shebang line (`#!/usr/bin/env bash\r`) breaks on Linux
+# ("env: 'bash\r': No such file or directory"), which bites anyone running
+# this repo from a Windows checkout inside WSL2 (the common case here).
+*.sh text eol=lf
