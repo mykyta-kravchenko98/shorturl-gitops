@@ -1,5 +1,11 @@
 # Non-recursive: only picks up loose manifests directly under k8s/, not the
-# otel-collector/ subfolder (that's its own Application).
+# otel-collector/ subfolder (that's its own Application). Not declaring
+# `directory: {recurse: false}` explicitly on purpose - false is the CRD's
+# zero value, an omitempty bool, so it can never actually be persisted as
+# "explicitly false" on the live object (it always serializes as absent).
+# Writing it in git just makes ArgoCD perpetually "diff" against a live
+# object that can't represent it - correct behavior is identical either
+# way (recurse defaults to false), so just omit it here too.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -11,8 +17,6 @@ spec:
     repoURL: https://github.com/mykyta-kravchenko98/shorturl-gitops.git
     targetRevision: main
     path: k8s
-    directory:
-      recurse: false
   destination:
     server: https://kubernetes.default.svc
   syncPolicy:
