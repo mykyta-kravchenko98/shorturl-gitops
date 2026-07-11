@@ -8,18 +8,28 @@ metadata:
   name: shorturl
   labels:
     otel-injection: enabled
+    # Kubernetes 1.21+ adds this automatically to every namespace - declare
+    # it here too so it's not perpetual drift (git says "not present", API
+    # server keeps re-adding it -> ArgoCD flips Synced/OutOfSync forever).
+    kubernetes.io/metadata.name: shorturl
 ---
 apiVersion: v1
 kind: Namespace
 metadata:
   name: observability
+  labels:
+    kubernetes.io/metadata.name: observability
 ---
 apiVersion: v1
 kind: Namespace
 metadata:
   name: otel-sidecar-injector
+  labels:
+    kubernetes.io/metadata.name: otel-sidecar-injector
 ---
 apiVersion: v1
 kind: Namespace
 metadata:
   name: cert-manager
+  labels:
+    kubernetes.io/metadata.name: cert-manager

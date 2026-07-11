@@ -16,5 +16,6 @@ spec:
     automated:
       prune: true
       selfHeal: true
-    syncOptions:
-      - CreateNamespace=true
+    # No CreateNamespace=true: observability is already created by the
+    # namespaces Application - see shorturl.yaml for why having both
+    # manage it causes perpetual Synced/OutOfSync flapping.
