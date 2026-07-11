@@ -1,0 +1,11 @@
+extends: default
+
+rules:
+  line-length: disable   # k8s manifests routinely have long lines (labels, annotations)
+  document-start: disable   # not fussed about requiring `---` at file start
+  truthy:
+    check-keys: false   # "on:" in future GH Actions-style files, values like on/off in configmaps
+  comments:
+    min-spaces-from-content: 1
+  indentation:
+    indent-sequences: consistent

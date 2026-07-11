@@ -1,0 +1,26 @@
+# Aggregated static analysis for every PR - Helm, Terraform, raw k8s
+# manifests, Dockerfiles, YAML style, shell scripts, and a secret scan.
+# No deploy here, just checks - config lives in .mega-linter.yml.
+name: PR Lint
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  megalinter:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write   # lets MegaLinter comment/annotate the PR
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # MegaLinter's diff-only mode needs real history
+
+      - name: MegaLinter
+        uses: oxsecurity/megalinter/flavors/terraform@v8
+        env:
+          VALIDATE_ALL_CODEBASE: false   # only lint files changed in the PR
+          DEFAULT_BRANCH: main
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
