@@ -20,5 +20,7 @@ spec:
     automated:
       prune: true
       selfHeal: true
-    syncOptions:
-      - CreateNamespace=true
+    # No CreateNamespace=true: the shorturl namespace is already created
+    # (with the otel-injection label) by the namespaces Application -
+    # having both manage the same Namespace object causes ArgoCD to flip
+    # it between Synced/OutOfSync forever as they overwrite each other.
