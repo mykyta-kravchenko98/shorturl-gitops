@@ -78,6 +78,18 @@ provider "kubernetes" {
   cluster_ca_certificate = kind_cluster.this.cluster_ca_certificate
 }
 
+# Needed by kubectl_manifest.root_app below - without this the kubectl
+# provider falls back to its default config resolution (~/.kube/config or
+# none at all), which resolves to http://localhost/api and fails with
+# "connection refused" since nothing's listening on port 80 locally.
+provider "kubectl" {
+  host                   = kind_cluster.this.endpoint
+  client_certificate     = kind_cluster.this.client_certificate
+  client_key             = kind_cluster.this.client_key
+  cluster_ca_certificate = kind_cluster.this.cluster_ca_certificate
+  load_config_file       = false
+}
+
 resource "kubernetes_namespace" "argocd" {
   metadata {
     name = "argocd"
