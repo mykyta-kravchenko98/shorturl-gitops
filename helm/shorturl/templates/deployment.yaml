@@ -21,6 +21,10 @@ spec:
         checksum/otel-sidecar-config: {{ include (print $.Template.BasePath "/otel-sidecar-config.yaml") . | sha256sum }}
         {{- end }}
     spec:
+      {{- if .Values.ecrPull.enabled }}
+      imagePullSecrets:
+        - name: {{ .Values.ecrPull.secretName }}
+      {{- end }}
       containers:
         - name: shorturl
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"

@@ -1,0 +1,50 @@
+{{- if .Values.ecrPull.enabled }}
+# hook-weight -20, run as a pre-install hook (before the seed Job at
+# weight -10 below) so the ServiceAccount/Role it needs already exist -
+# same "hooks run before normal manifests" ordering trap as
+# postgres-migrate-job.yaml, just applied in the other direction since
+# this one genuinely needs to run pre-install (the app Deployment needs
+# the pull secret to exist before it can pull its image).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ecr-pull-refresher
+  labels:
+    {{- include "shorturl.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-20"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ecr-pull-refresher
+  labels:
+    {{- include "shorturl.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-20"
+rules:
+  # Only this namespace, only Secrets - enough to create/replace
+  # ecrPull.secretName, nothing more.
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ecr-pull-refresher
+  labels:
+    {{- include "shorturl.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-20"
+subjects:
+  - kind: ServiceAccount
+    name: ecr-pull-refresher
+roleRef:
+  kind: Role
+  name: ecr-pull-refresher
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}

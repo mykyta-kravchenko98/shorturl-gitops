@@ -6,7 +6,11 @@ metadata:
   labels:
     {{- include "shorturl.labels" . | nindent 4 }}
   annotations:
-    "helm.sh/hook": pre-install,pre-upgrade
+    # post-install/post-upgrade, not pre-*: a pre-install hook runs before
+    # Helm applies the release's normal manifests, so the postgres
+    # Service/StatefulSet wouldn't exist yet - wait-for-postgres would spin
+    # forever trying to resolve a Service that hasn't been created.
+    "helm.sh/hook": post-install,post-upgrade
     "helm.sh/hook-weight": "0"
     "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
 spec:
@@ -18,6 +22,10 @@ spec:
         app.kubernetes.io/component: postgres-migrate
     spec:
       restartPolicy: Never
+      {{- if .Values.ecrPull.enabled }}
+      imagePullSecrets:
+        - name: {{ .Values.ecrPull.secretName }}
+      {{- end }}
       initContainers:
         - name: wait-for-postgres
           image: "{{ .Values.postgres.image }}"
@@ -33,23 +41,20 @@ spec:
                 sleep 2
               done
       containers:
+        # Migrations are embedded (go:embed) into this image at build time
+        # from the ShortUrl repo itself (cmd/migrate) - same commit, same
+        # tag as the app image, no separate ConfigMap to keep in sync by
+        # hand.
         - name: migrate
-          image: migrate/migrate:v4.17.1
+          image: "{{ .Values.postgres.migrateImage.repository }}:{{ .Values.postgres.migrateImage.tag }}"
+          env:
+            - name: POSTGRES_HOST
+              value: {{ .Values.postgres.host | quote }}
+            - name: POSTGRES_PORT
+              value: {{ .Values.postgres.port | quote }}
+            - name: POSTGRES_SSLMODE
+              value: {{ .Values.postgres.sslMode | quote }}
           envFrom:
             - secretRef:
                 name: postgres-credentials
-          command:
-            - sh
-            - -c
-            - |
-              migrate -path=/migrations \
-                -database "postgres://$POSTGRES_USER:$POSTGRES_PASSWORD@{{ .Values.postgres.host }}:{{ .Values.postgres.port }}/$POSTGRES_DB?sslmode={{ .Values.postgres.sslMode }}" \
-                up
-          volumeMounts:
-            - name: migrations
-              mountPath: /migrations
-      volumes:
-        - name: migrations
-          configMap:
-            name: postgres-migrations
 {{- end }}
