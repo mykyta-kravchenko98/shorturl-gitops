@@ -1,6 +1,18 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
+# Root cause of the earlier bust: putting `namespace: observability` inside
+# the individual manifests (deployment.yaml/service.yaml) instead of here
+# breaks the nameReference transformer's namespace-aware matching against
+# the generated (and, at that point, still cluster-scoped) ConfigMap - it
+# silently stops rewriting the reference. Setting it once here instead
+# applies it uniformly to every resource, generated ones included, so the
+# rewrite (and configMapGenerator's whole point - a content-hashed name that
+# forces a pod roll when otel-config.yaml changes) actually works. Verified
+# against a minimal repro before rolling this back out - see git history if
+# this regresses again.
+namespace: observability
+
 resources:
   - deployment.yaml
   - service.yaml
