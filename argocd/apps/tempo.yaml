@@ -8,7 +8,7 @@ spec:
   source:
     repoURL: https://grafana.github.io/helm-charts
     chart: tempo
-    targetRevision: 2.9.0
+    targetRevision: 1.24.4
     helm:
       values: |
         persistence:
@@ -20,7 +20,7 @@ spec:
             memory: 128Mi
           limits:
             memory: 256Mi
-        # Retain traces briefly - this is a dev cluster, not a real archive.
+        # 30d retention for building an LLM-training dataset from cluster telemetry.
         tempo:
           retention: 720h
   destination:
