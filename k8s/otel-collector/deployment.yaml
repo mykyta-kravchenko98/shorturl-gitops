@@ -2,7 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: otel-collector-gateway
-  namespace: observability
   labels:
     app.kubernetes.io/name: otel-collector-gateway
 spec:
