@@ -21,19 +21,21 @@ spec:
               compaction_interval: 10m
             limits_config:
               retention_period: 720h
+              ingestion_rate_mb: 16
+              ingestion_burst_size_mb: 32
           resources:
             requests:
               cpu: 50m
               memory: 128Mi
             limits:
-              memory: 256Mi
+              memory: 512Mi
         promtail:
           resources:
             requests:
               cpu: 20m
               memory: 32Mi
             limits:
-              memory: 64Mi
+              memory: 128Mi
   destination:
     server: https://kubernetes.default.svc
     namespace: observability
