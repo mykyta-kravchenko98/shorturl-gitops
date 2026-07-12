@@ -22,14 +22,16 @@ serviceAccountName: ecr-pull-refresher
 restartPolicy: Never
 initContainers:
   - name: fetch-kubectl
-    # Pinned-ish: matches whatever's "stable" at pull time. If this ever
-    # breaks, pin to an explicit version instead of stable.txt.
-    image: alpine:3.20
+    # curl is baked into this image, so a run no longer depends on the
+    # Alpine package mirror being up - one less thing to flake on every
+    # CronJob tick. Still pulls whatever's "stable" at run time though; if
+    # that ever causes drift, pin to an explicit kubectl version instead of
+    # stable.txt.
+    image: curlimages/curl:8.10.1
     command:
       - sh
       - -c
       - |
-        apk add --no-cache curl >/dev/null
         KVER="$(curl -L -s https://dl.k8s.io/release/stable.txt)"
         curl -L -o /shared/kubectl "https://dl.k8s.io/release/${KVER}/bin/linux/amd64/kubectl"
         chmod +x /shared/kubectl
