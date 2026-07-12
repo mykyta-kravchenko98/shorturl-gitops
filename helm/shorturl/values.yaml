@@ -35,14 +35,17 @@ postgres:
   storage: 1Gi
   host: postgres
   port: "5432"
-  user: user
-  password: password
   dbName: ShortURLDataDB
   sslMode: disable
 
   migrateImage:
     repository: 528081867341.dkr.ecr.eu-central-1.amazonaws.com/shorturl-migrate
     tag: latest
+
+secretsManagement:
+  awsRegion: eu-central-1
+  postgresSecretName: shorturl/postgres
+  credentialsSecretName: aws-secretstore-credentials
 
 ecrPull:
   enabled: true
