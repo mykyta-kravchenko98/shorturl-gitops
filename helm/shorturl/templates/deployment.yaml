@@ -36,6 +36,10 @@ spec:
           env:
             - name: environment
               value: "prod"
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
           volumeMounts:
             - name: config
               mountPath: /app/config/config.yml
