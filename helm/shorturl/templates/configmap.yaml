@@ -8,8 +8,6 @@ data:
   config.yml: |
     postgresDB:
       host: {{ .Values.postgres.host }}
-      user: {{ .Values.postgres.user }}
-      password: {{ .Values.postgres.password }}
       dbName: {{ .Values.postgres.dbName }}
       port: "{{ .Values.postgres.port }}"
       sslmode: {{ .Values.postgres.sslMode }}
