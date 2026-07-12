@@ -14,6 +14,12 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: otel-collector-gateway
+      annotations:
+        # Plain manifest, no Helm templating here - so no checksum/config
+        # helper. Bump this by hand (or just touch the value) whenever
+        # configmap.yaml changes, otherwise the running pod silently keeps
+        # the old config and ArgoCD won't restart it for you.
+        config-version: "2"
     spec:
       containers:
         - name: collector
