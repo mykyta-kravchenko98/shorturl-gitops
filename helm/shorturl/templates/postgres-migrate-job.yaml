@@ -46,7 +46,7 @@ spec:
         # tag as the app image, no separate ConfigMap to keep in sync by
         # hand.
         - name: migrate
-          image: "{{ .Values.postgres.migrateImage.repository }}:{{ .Values.postgres.migrateImage.tag }}"
+          image: "{{ include "shorturl.imageRef" .Values.postgres.migrateImage }}"
           env:
             - name: POSTGRES_HOST
               value: {{ .Values.postgres.host | quote }}

@@ -11,6 +11,14 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 app.kubernetes.io/name: shorturl
 {{- end -}}
 
+{{- define "shorturl.imageRef" -}}
+{{- if .digest -}}
+{{ .repository }}@{{ .digest }}
+{{- else -}}
+{{ .repository }}:{{ .tag }}
+{{- end -}}
+{{- end -}}
+
 {{/*
 Shared pod spec for both the one-shot seed Job and the recurring CronJob
 that refresh the ECR docker-registry pull secret. Takes .Values.ecrPull as
