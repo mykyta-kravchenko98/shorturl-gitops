@@ -1,8 +1,8 @@
 replicaCount: 1
 image:
   repository: 528081867341.dkr.ecr.eu-central-1.amazonaws.com/shorturl
-  tag: 9a24efd3abbfb215471594af71705783bff51ff0
-  digest: "sha256:7b4bd905d9eb7be074dfa313d9e42435907ff137c33c24249cd17e300744523c"
+  tag: 1a2887c3ba7df842c83bce21450fbec5eeadaa12
+  digest: "sha256:cfefc244e5f121375ad635aee2621ab1fa09db747d0021fe10d02c66eb2f5f77"
   pullPolicy: IfNotPresent
 service:
   port: 8585
@@ -34,8 +34,8 @@ postgres:
   sslMode: disable
   migrateImage:
     repository: 528081867341.dkr.ecr.eu-central-1.amazonaws.com/shorturl-migrate
-    tag: 9a24efd3abbfb215471594af71705783bff51ff0
-    digest: "sha256:a4f13b395c6c7f449b77b5a8963bba0bf5583c8cdbcfc23958600ee6a7e221d5"
+    tag: 1a2887c3ba7df842c83bce21450fbec5eeadaa12
+    digest: "sha256:a4c816ffb34a47956268297623371524e7500d68f1d894d85ff323887ff1dd18"
 secretsManagement:
   awsRegion: eu-central-1
   postgresSecretName: shorturl/postgres
