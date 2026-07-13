@@ -2,7 +2,6 @@
 replicaCount: 1
 
 image:
-  tag: latest
   pullPolicy: IfNotPresent
 
 autoscaling:

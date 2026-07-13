@@ -3,6 +3,7 @@ replicaCount: 1
 image:
   repository: 528081867341.dkr.ecr.eu-central-1.amazonaws.com/shorturl
   tag: latest
+  digest: ""
   pullPolicy: IfNotPresent
 
 service:
@@ -41,6 +42,7 @@ postgres:
   migrateImage:
     repository: 528081867341.dkr.ecr.eu-central-1.amazonaws.com/shorturl-migrate
     tag: latest
+    digest: ""
 
 secretsManagement:
   awsRegion: eu-central-1

@@ -28,7 +28,7 @@ spec:
       {{- end }}
       containers:
         - name: shorturl
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          image: "{{ include "shorturl.imageRef" .Values.image }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http
