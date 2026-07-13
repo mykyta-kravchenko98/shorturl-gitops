@@ -1,32 +1,26 @@
 replicaCount: 1
-
 image:
   repository: 528081867341.dkr.ecr.eu-central-1.amazonaws.com/shorturl
-  tag: latest
-  digest: ""
+  tag: 9a24efd3abbfb215471594af71705783bff51ff0
+  digest: "sha256:7b4bd905d9eb7be074dfa313d9e42435907ff137c33c24249cd17e300744523c"
   pullPolicy: IfNotPresent
-
 service:
   port: 8585
-
 resources:
   requests:
     cpu: 50m
     memory: 64Mi
   limits:
     memory: 128Mi
-
 autoscaling:
   enabled: false
   minReplicas: 1
   maxReplicas: 3
   targetCPUUtilizationPercentage: 75
-
 otel:
   sidecarInject: true
   sidecarImage: otel/opentelemetry-collector-contrib:0.105.0
   gatewayEndpoint: otel-collector-gateway.observability.svc.cluster.local:4317
-
 postgres:
   # When true, this chart also deploys Postgres itself (plain StatefulSet,
   # no operator - see templates/postgres-*.yaml). Set false and point
@@ -38,17 +32,14 @@ postgres:
   port: "5432"
   dbName: ShortURLDataDB
   sslMode: disable
-
   migrateImage:
     repository: 528081867341.dkr.ecr.eu-central-1.amazonaws.com/shorturl-migrate
-    tag: latest
-    digest: ""
-
+    tag: 9a24efd3abbfb215471594af71705783bff51ff0
+    digest: "sha256:a4f13b395c6c7f449b77b5a8963bba0bf5583c8cdbcfc23958600ee6a7e221d5"
 secretsManagement:
   awsRegion: eu-central-1
   postgresSecretName: shorturl/postgres
   credentialsSecretName: aws-secretstore-credentials
-
 ecrPull:
   enabled: true
   region: eu-central-1
@@ -56,20 +47,16 @@ ecrPull:
   secretName: ecr-pull-secret
   credentialsSecretName: aws-ecr-credentials
   schedule: "0 */10 * * *"
-
 server:
   restPort: "8585"
   dataCenterId: 1
   machineId: 1
-
 ingress:
   enabled: false
   host: shorturl.local
-
 metrics:
   serviceMonitor:
     enabled: false
-
 probes:
   liveness:
     path: /healthz
