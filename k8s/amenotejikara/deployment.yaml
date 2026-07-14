@@ -24,6 +24,11 @@ spec:
         - name: manager
           image: 528081867341.dkr.ecr.eu-central-1.amazonaws.com/amenotejikara:aebb6a8a84c27c20700537cc2d9070eb37814486
           imagePullPolicy: IfNotPresent
+          env:
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
           resources:
             requests:
               cpu: 20m
