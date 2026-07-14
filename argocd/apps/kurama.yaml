@@ -1,0 +1,24 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kurama
+  namespace: argocd
+  annotations:
+    # Install the CRD/controller before ordinary application workloads.
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/mykyta-kravchenko98/shorturl-gitops.git
+    targetRevision: main
+    path: k8s/kurama
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: shorturl
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      # TrafficScenario and its CRD are introduced in the same sync.
+      - SkipDryRunOnMissingResource=true
