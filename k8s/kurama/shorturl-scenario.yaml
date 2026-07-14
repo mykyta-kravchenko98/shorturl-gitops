@@ -1,0 +1,7 @@
+apiVersion: traffic.kurama.dev/v1alpha1
+kind: TrafficScenario
+metadata:
+  name: shorturl
+spec:
+  target:
+    baseURL: http://shorturl:8585
