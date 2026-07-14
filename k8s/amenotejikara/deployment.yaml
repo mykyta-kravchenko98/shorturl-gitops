@@ -22,7 +22,7 @@ spec:
         - name: ecr-pull-secret
       containers:
         - name: manager
-          image: 528081867341.dkr.ecr.eu-central-1.amazonaws.com/amenotejikara:latest
+          image: 528081867341.dkr.ecr.eu-central-1.amazonaws.com/amenotejikara:aebb6a8a84c27c20700537cc2d9070eb37814486
           imagePullPolicy: IfNotPresent
           resources:
             requests:

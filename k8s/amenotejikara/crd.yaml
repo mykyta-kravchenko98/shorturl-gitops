@@ -1,3 +1,8 @@
+# Auto-synced by Amenotejikara's CI (.github/workflows/go-build.yml,
+# 'sync-gitops' job) from config/crd/bases/ on every push to main.
+# Don't hand-edit this file directly - edit the CRD types in
+# Amenotejikara's api/v1alpha1, run controller-gen, and push.
+#
 ---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
