@@ -1,0 +1,34 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: amenotejikara-manager
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: amenotejikara-manager
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "patch", "update", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "patch", "update", "watch"]
+  - apiGroups: ["ops.amenotejikara.dev"]
+    resources: ["credentialrotations"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["ops.amenotejikara.dev"]
+    resources: ["credentialrotations/status"]
+    verbs: ["get", "patch", "update"]
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: amenotejikara-manager
+subjects:
+  - kind: ServiceAccount
+    name: amenotejikara-manager
+roleRef:
+  kind: Role
+  name: amenotejikara-manager
+  apiGroup: rbac.authorization.k8s.io

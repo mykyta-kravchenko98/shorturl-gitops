@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: amenotejikara-manager
+  labels:
+    app.kubernetes.io/name: amenotejikara
+    app.kubernetes.io/component: manager
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: amenotejikara
+      app.kubernetes.io/component: manager
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: amenotejikara
+        app.kubernetes.io/component: manager
+    spec:
+      serviceAccountName: amenotejikara-manager
+      imagePullSecrets:
+        - name: ecr-pull-secret
+      containers:
+        - name: manager
+          image: 528081867341.dkr.ecr.eu-central-1.amazonaws.com/amenotejikara:latest
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: 20m
+              memory: 32Mi
+            limits:
+              memory: 64Mi
