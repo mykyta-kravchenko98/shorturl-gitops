@@ -22,7 +22,7 @@ spec:
         - name: ecr-pull-secret
       containers:
         - name: manager
-          image: 528081867341.dkr.ecr.eu-central-1.amazonaws.com/amenotejikara:89b4d6827ba844a831d1b4e7c546e00ca0191f6a
+          image: 528081867341.dkr.ecr.eu-central-1.amazonaws.com/amenotejikara:96fa9363c32407f1b7f014ab76886b2338b20a6d
           imagePullPolicy: IfNotPresent
           env:
             - name: POD_NAMESPACE
