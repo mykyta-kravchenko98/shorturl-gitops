@@ -3,6 +3,55 @@ kind: TrafficScenario
 metadata:
   name: shorturl
 spec:
-  suspend: false
+  suspend: true
   target:
     baseURL: http://shorturl:8585
+  rate:
+    requestsPerMinute: 30
+  stores:
+    - name: hashes
+      capacity: 10000
+  operations:
+    - name: create
+      weight: 20
+      request:
+        method: POST
+        pathTemplate: /api/v1/data/shorten
+        headers:
+          Content-Type: application/json
+        bodyTemplate: '{"longURL":"https://example.invalid/kurama/{{id}}"}'
+        variables:
+          - name: id
+            source:
+              type: randomUUID
+      expectedStatusCodes:
+        - 200
+      capture:
+        jsonPointer: /shortURL
+        store: hashes
+
+    - name: resolve-valid
+      weight: 70
+      request:
+        method: GET
+        pathTemplate: /api/v1/{{hash}}
+        variables:
+          - name: hash
+            source:
+              type: store
+              store: hashes
+      expectedStatusCodes:
+        - 308
+
+    - name: resolve-invalid
+      weight: 10
+      request:
+        method: GET
+        pathTemplate: /api/v1/{{hash}}
+        variables:
+          - name: hash
+            source:
+              type: randomBase62
+              length: 8
+      expectedStatusCodes:
+        - 404
