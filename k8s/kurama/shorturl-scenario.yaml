@@ -3,7 +3,7 @@ kind: TrafficScenario
 metadata:
   name: shorturl
 spec:
-  suspend: true
+  suspend: false
   target:
     baseURL: http://shorturl:8585
   rate:
