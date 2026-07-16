@@ -59,7 +59,7 @@ spec:
                     filterByTraceID: false
                     filterBySpanID: false
                     customQuery: true
-                    query: '{namespace=~".+"} | json | trace_id=`$${__trace.traceId}`'
+                    query: '{namespace=~".+"} | json | trace_id="$${__trace.traceId}"'
               - name: Prometheus
                 uid: prometheus
                 type: prometheus
