@@ -35,13 +35,31 @@ spec:
             apiVersion: 1
             datasources:
               - name: Loki
+                uid: loki
                 type: loki
                 url: http://loki-stack.observability.svc.cluster.local:3100
                 access: proxy
+                jsonData:
+                  derivedFields:
+                    - name: TraceID
+                      matcherRegex: '"trace_id":"([0-9a-fA-F]{32})"'
+                      datasourceUid: tempo
+                      url: '$${__value.raw}'
+                      urlDisplayLabel: View trace
               - name: Tempo
+                uid: tempo
                 type: tempo
                 url: http://tempo.observability.svc.cluster.local:3200
                 access: proxy
+                jsonData:
+                  tracesToLogsV2:
+                    datasourceUid: loki
+                    spanStartTimeShift: "-2s"
+                    spanEndTimeShift: "2s"
+                    filterByTraceID: false
+                    filterBySpanID: false
+                    customQuery: true
+                    query: '{namespace=~".+"} | json | trace_id=`$${__trace.traceId}`'
               - name: Prometheus
                 uid: prometheus
                 type: prometheus
