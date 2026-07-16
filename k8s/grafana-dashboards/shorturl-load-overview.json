@@ -18,7 +18,6 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": null,
   "links": [],
   "panels": [
     {
@@ -64,7 +63,7 @@
         "x": 0,
         "y": 0
       },
-      "id": 5,
+      "id": null,
       "options": {
         "colorMode": "value",
         "graphMode": "area",
@@ -538,7 +537,15 @@
               },
               {
                 "color": "red",
-                "value": 80
+                "value": 0
+              },
+              {
+                "color": "#EAB839",
+                "value": 30
+              },
+              {
+                "color": "green",
+                "value": 50
               }
             ]
           },
@@ -698,6 +705,6 @@
   "timezone": "browser",
   "title": "ShortUrl Load Overview",
   "uid": "shorturl-load-overview",
-  "version": 8,
+  "version": 1,
   "weekStart": ""
 }
