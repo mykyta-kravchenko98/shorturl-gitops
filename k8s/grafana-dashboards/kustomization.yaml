@@ -12,3 +12,4 @@ generatorOptions:
   disableNameSuffixHash: true
   labels:
     grafana_dashboard: "1"
+    
