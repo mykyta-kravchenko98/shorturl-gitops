@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: kurama-redis
+  labels:
+    app.kubernetes.io/name: kurama-redis
+    app.kubernetes.io/component: storage
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: kurama-redis
+    app.kubernetes.io/component: storage
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: redis
