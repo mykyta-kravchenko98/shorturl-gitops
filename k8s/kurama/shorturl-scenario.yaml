@@ -3,6 +3,8 @@ kind: TrafficScenario
 metadata:
   name: shorturl
 spec:
+  storage:
+    type: redis
   suspend: false
   target:
     baseURL: http://shorturl:8585
