@@ -33,6 +33,8 @@ spec:
               value: 528081867341.dkr.ecr.eu-central-1.amazonaws.com/kurama@sha256:6bf2989b40471b7540889b017ac27a79ea8b1bf44e55cbf5894a517dd2e795f4
             - name: KURAMA_RUNNER_IMAGE_PULL_SECRET
               value: ecr-pull-secret
+            - name: KURAMA_REDIS_ADDR
+              value: kurama-redis.kurama-system.svc.cluster.local:6379
           resources:
             requests:
               cpu: 20m

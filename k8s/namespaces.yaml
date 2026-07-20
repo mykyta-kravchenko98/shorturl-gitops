@@ -40,3 +40,10 @@ metadata:
   name: external-secrets
   labels:
     kubernetes.io/metadata.name: external-secrets
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kurama-system
+  labels:
+    kubernetes.io/metadata.name: kurama-system
