@@ -5,8 +5,14 @@ namespace: observability
 
 configMapGenerator:
   - name: grafana-dashboard-shorturl
+    namespace: observability
     files:
       - shorturl-load-overview.json
+
+  - name: grafana-dashboard-kurama
+    namespace: observability
+    files:
+      - kurama-store-overview.json
 
 generatorOptions:
   disableNameSuffixHash: true
