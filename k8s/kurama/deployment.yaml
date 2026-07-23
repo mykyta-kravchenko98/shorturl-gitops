@@ -22,14 +22,12 @@ spec:
         - name: ecr-pull-secret
       containers:
         - name: manager
-          image: 528081867341.dkr.ecr.eu-central-1.amazonaws.com/kurama@sha256:728877b950a39ebe0af4e08e65305980d94e1ea1dbadcb306379f51c9235fd5b
+          image: 528081867341.dkr.ecr.eu-central-1.amazonaws.com/kurama@sha256:a510a0ab95020efad9c1e6476b9574951c23aa9efbe037ffad8f47fd06d75126
           imagePullPolicy: IfNotPresent
-
           ports:
             - name: health
               containerPort: 8081
               protocol: TCP
-
           startupProbe:
             httpGet:
               path: /healthz
@@ -37,7 +35,6 @@ spec:
             periodSeconds: 2
             timeoutSeconds: 1
             failureThreshold: 30
-
           livenessProbe:
             httpGet:
               path: /healthz
@@ -45,7 +42,6 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 1
             failureThreshold: 3
-
           readinessProbe:
             httpGet:
               path: /readyz
@@ -53,14 +49,13 @@ spec:
             periodSeconds: 5
             timeoutSeconds: 1
             failureThreshold: 3
-
           env:
             - name: POD_NAMESPACE
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
             - name: KURAMA_RUNNER_IMAGE
-              value: 528081867341.dkr.ecr.eu-central-1.amazonaws.com/kurama@sha256:728877b950a39ebe0af4e08e65305980d94e1ea1dbadcb306379f51c9235fd5b
+              value: 528081867341.dkr.ecr.eu-central-1.amazonaws.com/kurama@sha256:a510a0ab95020efad9c1e6476b9574951c23aa9efbe037ffad8f47fd06d75126
             - name: KURAMA_RUNNER_IMAGE_PULL_SECRET
               value: ecr-pull-secret
             - name: KURAMA_REDIS_ADDR
