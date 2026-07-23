@@ -10,9 +10,15 @@ spec:
   target:
     baseURL: http://shorturl:8585
   rate:
-    requestsPerMinute: 45
+    schedule:
+      type: uniform
+      minRequestsPerMinute: 2
+      maxRequestsPerMinute: 128
+      windowMinutes: 1
     limiter:
       type: redis
+    profile:
+      type: uniform
   stores:
     - name: hashes
       capacity: 10000
