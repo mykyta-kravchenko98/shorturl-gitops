@@ -21,8 +21,8 @@ spec:
 
     profile:
       type: burst
-      minBurstSize: 10
-      maxBurstSize: 25
+      minBurstSize: 9
+      maxBurstSize: 23
       delayDivisor: 10
   stores:
     - name: hashes

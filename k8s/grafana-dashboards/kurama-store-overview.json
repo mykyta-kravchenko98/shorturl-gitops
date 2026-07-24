@@ -18,8 +18,228 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
+  "id": null,
   "links": [],
   "panels": [
+    {
+      "datasource": {
+        "default": true,
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "id": 8,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "100 *\r\nsum(\r\n  rate(kurama_rate_limiter_permits_granted_total{\r\n    backend=\"redis\"\r\n  }[5m])\r\n)\r\n/\r\nclamp_min(\r\n  sum(\r\n    rate(kurama_rate_limiter_permits_requested_total{\r\n      backend=\"redis\"\r\n    }[5m])\r\n  ),\r\n  0.000001\r\n)",
+          "instant": false,
+          "legendFormat": "Permit grant efficiency",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Permit grant efficiency",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "default": true,
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "decimals": 1,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "id": 6,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(kurama_rate_limiter_permits_requested_total{backend=\"redis\"}[5m]))\r\n/\r\nclamp_min(\r\n  sum(rate(kurama_rate_limiter_acquisitions_total{backend=\"redis\"}[5m])),\r\n  0.000001\r\n)",
+          "instant": false,
+          "legendFormat": "avg burst size",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "max(kurama_rate_profile_burst_size{bound=\"min\"})",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "configured min",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "max(kurama_rate_profile_burst_size{bound=\"max\"})",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "configured max",
+          "range": true,
+          "refId": "C"
+        }
+      ],
+      "title": "Average requested burst size",
+      "type": "timeseries"
+    },
     {
       "datasource": {
         "default": true,
@@ -85,9 +305,9 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 0
+        "y": 8
       },
-      "id": null,
+      "id": 7,
       "options": {
         "legend": {
           "calcs": [],
@@ -107,14 +327,27 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "max(kurama_rate_schedule_requests_per_minute)",
+          "expr": "60 * sum(\r\n  rate(kurama_rate_limiter_permits_requested_total{\r\n    backend=\"redis\"\r\n  }[5m])\r\n)",
           "instant": false,
-          "legendFormat": "Selected RPM",
+          "legendFormat": "Requested",
           "range": true,
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "60 * sum(\r\n  rate(kurama_rate_limiter_permits_granted_total{\r\n    backend=\"redis\"\r\n  }[5m])\r\n)",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "Granted",
+          "range": true,
+          "refId": "B"
         }
       ],
-      "title": "Selected RPM over time",
+      "title": "Requested и granted permits",
       "type": "timeseries"
     },
     {
@@ -146,7 +379,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 0
+        "y": 8
       },
       "id": 3,
       "options": {
@@ -241,8 +474,7 @@
                 "value": 80
               }
             ]
-          },
-          "unit": "s"
+          }
         },
         "overrides": []
       },
@@ -250,9 +482,9 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 8
+        "y": 16
       },
-      "id": 2,
+      "id": 5,
       "options": {
         "legend": {
           "calcs": [],
@@ -272,14 +504,14 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (backend, store, operation) (\r\n  rate(kurama_store_operation_duration_seconds_sum[5m])\r\n)\r\n/\r\nsum by (backend, store, operation) (\r\n  rate(kurama_store_operation_duration_seconds_count[5m])\r\n)",
+          "expr": "sum by (result) (\r\n  rate(kurama_rate_limiter_acquisitions_total{\r\n    backend=\"redis\"\r\n  }[5m])\r\n)",
           "instant": false,
-          "legendFormat": "{{backend}} / {{store}} / {{operation}}",
+          "legendFormat": "__auto",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Redis operation latency",
+      "title": "Limiter",
       "type": "timeseries"
     },
     {
@@ -348,7 +580,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 8
+        "y": 16
       },
       "id": 1,
       "options": {
@@ -378,6 +610,201 @@
         }
       ],
       "title": "Store operations rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "default": true,
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 24
+      },
+      "id": 4,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "max(kurama_rate_schedule_requests_per_minute)",
+          "instant": false,
+          "legendFormat": "Selected RPM",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Selected RPM over time",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "default": true,
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 32
+      },
+      "id": 2,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum by (backend, store, operation) (\r\n  rate(kurama_store_operation_duration_seconds_sum[5m])\r\n)\r\n/\r\nsum by (backend, store, operation) (\r\n  rate(kurama_store_operation_duration_seconds_count[5m])\r\n)",
+          "instant": false,
+          "legendFormat": "{{backend}} / {{store}} / {{operation}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Redis operation latency",
       "type": "timeseries"
     }
   ],
