@@ -15,10 +15,15 @@ spec:
       minRequestsPerMinute: 2
       maxRequestsPerMinute: 128
       windowMinutes: 1
-    limiter:
-      type: redis
-    profile:
-      type: uniform
+
+      limiter:
+        type: redis
+
+      profile:
+        type: burst
+        minBurstSize: 10
+        maxBurstSize: 25
+        delayDivisor: 10
   stores:
     - name: hashes
       capacity: 10000
