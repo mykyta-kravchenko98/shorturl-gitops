@@ -3,12 +3,6 @@ kind: TrafficScenario
 metadata:
   name: shorturl
 spec:
-  replicas: 2
-  storage:
-    type: redis
-  suspend: false
-  target:
-    baseURL: http://shorturl:8585
   rate:
     schedule:
       type: uniform
@@ -16,14 +10,14 @@ spec:
       maxRequestsPerMinute: 128
       windowMinutes: 1
 
-      limiter:
-        type: redis
+    limiter:
+      type: redis
 
-      profile:
-        type: burst
-        minBurstSize: 10
-        maxBurstSize: 25
-        delayDivisor: 10
+    profile:
+      type: burst
+      minBurstSize: 10
+      maxBurstSize: 25
+      delayDivisor: 10
   stores:
     - name: hashes
       capacity: 10000
