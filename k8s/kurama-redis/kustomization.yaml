@@ -6,3 +6,4 @@ namespace: kurama-system
 resources:
   - service.yaml
   - statefulset.yaml
+  - networkpolicy.yaml
