@@ -10,7 +10,7 @@ metadata:
 rules:
   - apiGroups: ["traffic.kurama.dev"]
     resources: ["trafficscenarios"]
-    verbs: ["get", "list", "watch"]
+    verbs: ["get", "list", "watch", "patch", "update"]
   - apiGroups: ["traffic.kurama.dev"]
     resources: ["trafficscenarios/status"]
     verbs: ["get", "patch", "update"]
