@@ -6,7 +6,7 @@ spec:
   replicas: 2
   storage:
     type: redis
-  suspend: true
+  suspend: false
   target:
     baseURL: http://shorturl:8585
   rate:
