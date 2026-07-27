@@ -49,6 +49,11 @@ initContainers:
 containers:
   - name: refresh
     image: amazon/aws-cli:latest
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+          - ALL
     command: ["sh", "/scripts/refresh.sh"]
     env:
       - name: ECR_REGION

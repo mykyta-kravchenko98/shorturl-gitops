@@ -24,11 +24,21 @@ spec:
         app.kubernetes.io/name: amenotejikara
         app.kubernetes.io/component: manager
     spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       serviceAccountName: amenotejikara-manager
       imagePullSecrets:
         - name: ecr-pull-secret
       containers:
         - name: manager
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
           image: 528081867341.dkr.ecr.eu-central-1.amazonaws.com/amenotejikara:bbd2968626ae3f1b0ac7b61478b70b61ca60ef96
           imagePullPolicy: IfNotPresent
           ports:
