@@ -37,8 +37,11 @@ initContainers:
     # stable.txt.
     image: curlimages/curl:8.10.1
     securityContext:
+      runAsNonRoot: true
       allowPrivilegeEscalation: false
       readOnlyRootFilesystem: true
+      seccompProfile:
+        type: RuntimeDefault
       capabilities:
         drop:
           - ALL
@@ -63,7 +66,10 @@ containers:
   - name: refresh
     image: amazon/aws-cli:latest
     securityContext:
+      runAsNonRoot: true
       allowPrivilegeEscalation: false
+      seccompProfile:
+        type: RuntimeDefault
       capabilities:
         drop:
           - ALL
