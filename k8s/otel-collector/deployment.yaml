@@ -14,8 +14,19 @@ spec:
       labels:
         app.kubernetes.io/name: otel-collector-gateway
     spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+
       containers:
         - name: collector
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
           image: otel/opentelemetry-collector-contrib:0.105.0
           args: ["--config=/etc/otel/config.yaml"]
           ports:

@@ -19,8 +19,17 @@ spec:
         app.kubernetes.io/name: shorturl
         app.kubernetes.io/component: postgres
     spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: postgres
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           image: "{{ .Values.postgres.image }}"
           ports:
             - name: postgres

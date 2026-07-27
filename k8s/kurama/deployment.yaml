@@ -24,11 +24,21 @@ spec:
         app.kubernetes.io/name: kurama
         app.kubernetes.io/component: manager
     spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       serviceAccountName: kurama-manager
       imagePullSecrets:
         - name: ecr-pull-secret
       containers:
         - name: manager
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
           image: 528081867341.dkr.ecr.eu-central-1.amazonaws.com/kurama@sha256:0485164100263341193c7ed1dd48802457492ce3e1891f3fbfe2070ccda52ecf
           imagePullPolicy: IfNotPresent
           ports:

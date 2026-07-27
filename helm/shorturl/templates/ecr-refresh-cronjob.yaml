@@ -22,5 +22,9 @@ spec:
             app.kubernetes.io/name: shorturl
             app.kubernetes.io/component: ecr-pull-refresh
         spec:
+          securityContext:
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
           {{- include "shorturl.ecrRefreshPodSpec" .Values.ecrPull | nindent 10 }}
 {{- end }}

@@ -32,9 +32,19 @@ spec:
       {{- if .Values.ecrPull.enabled }}
       imagePullSecrets:
         - name: {{ .Values.ecrPull.secretName }}
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       {{- end }}
       containers:
         - name: shorturl
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
           image: "{{ include "shorturl.imageRef" .Values.image }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
