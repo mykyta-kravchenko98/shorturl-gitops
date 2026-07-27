@@ -80,6 +80,12 @@ spec:
             {{- toYaml .Values.resources | nindent 12 }}
         {{- if .Values.otel.sidecarInject }}
         - name: otel-collector-sidecar
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
           image: "{{ .Values.otel.sidecarImage }}"
           args: ["--config=/etc/otel/config.yaml"]
           ports:
