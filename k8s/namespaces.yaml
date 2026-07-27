@@ -8,10 +8,16 @@ metadata:
   name: shorturl
   labels:
     otel-injection: enabled
-    # Kubernetes 1.21+ adds this automatically to every namespace - declare
-    # it here too so it's not perpetual drift (git says "not present", API
-    # server keeps re-adding it -> ArgoCD flips Synced/OutOfSync forever).
+
+    # Declared explicitly to avoid ArgoCD drift.
     kubernetes.io/metadata.name: shorturl
+
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/enforce-version: v1.35
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/audit-version: v1.35
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/warn-version: v1.35
 ---
 apiVersion: v1
 kind: Namespace

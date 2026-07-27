@@ -4,6 +4,18 @@ metadata:
   name: shorturl
 spec:
   replicas: 2
+
+  runner:
+    resources:
+      requests:
+        cpu: 25m
+        memory: 32Mi
+        ephemeral-storage: 16Mi
+      limits:
+        cpu: 500m
+        memory: 128Mi
+        ephemeral-storage: 64Mi
+
   storage:
     type: redis
   suspend: false
