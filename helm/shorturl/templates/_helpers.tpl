@@ -46,6 +46,13 @@ initContainers:
     volumeMounts:
       - name: shared
         mountPath: /shared
+    resources:
+      requests:
+        cpu: 10m
+        memory: 16Mi
+      limits:
+        cpu: 200m
+        memory: 64Mi
 containers:
   - name: refresh
     image: amazon/aws-cli:latest
@@ -62,13 +69,6 @@ containers:
         cpu: 200m
         memory: 64Mi
     command: ["sh", "/scripts/refresh.sh"]
-    resources:
-      requests:
-        cpu: 10m
-        memory: 16Mi
-      limits:
-        cpu: 200m
-        memory: 64Mi
     env:
       - name: ECR_REGION
         value: {{ .region | quote }}
