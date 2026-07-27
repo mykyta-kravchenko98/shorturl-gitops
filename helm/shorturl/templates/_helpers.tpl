@@ -40,6 +40,8 @@ initContainers:
       runAsNonRoot: true
       allowPrivilegeEscalation: false
       readOnlyRootFilesystem: true
+      runAsUser: 100
+      runAsGroup: 101
       seccompProfile:
         type: RuntimeDefault
       capabilities:
@@ -68,6 +70,8 @@ containers:
     securityContext:
       runAsNonRoot: true
       allowPrivilegeEscalation: false
+      runAsUser: 100
+      runAsGroup: 101
       seccompProfile:
         type: RuntimeDefault
       capabilities:
