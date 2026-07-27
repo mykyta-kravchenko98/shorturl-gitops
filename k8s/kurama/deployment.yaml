@@ -29,7 +29,7 @@ spec:
         - name: ecr-pull-secret
       containers:
         - name: manager
-          image: 528081867341.dkr.ecr.eu-central-1.amazonaws.com/kurama@sha256:081f812d69e5de94b74ef6fcbd3f2f9c5f35c9160f59c7815133aba6b341c2a5
+          image: 528081867341.dkr.ecr.eu-central-1.amazonaws.com/kurama@sha256:fe43d050536981d234647a6d4f7efaed8a634e76642532cb0aa54e085b7d3caf
           imagePullPolicy: IfNotPresent
           ports:
             - name: health
@@ -62,7 +62,7 @@ spec:
                 fieldRef:
                   fieldPath: metadata.namespace
             - name: KURAMA_RUNNER_IMAGE
-              value: 528081867341.dkr.ecr.eu-central-1.amazonaws.com/kurama@sha256:081f812d69e5de94b74ef6fcbd3f2f9c5f35c9160f59c7815133aba6b341c2a5
+              value: 528081867341.dkr.ecr.eu-central-1.amazonaws.com/kurama@sha256:fe43d050536981d234647a6d4f7efaed8a634e76642532cb0aa54e085b7d3caf
             - name: KURAMA_RUNNER_IMAGE_PULL_SECRET
               value: ecr-pull-secret
             - name: KURAMA_REDIS_ADDR
