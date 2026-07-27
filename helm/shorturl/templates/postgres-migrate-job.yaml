@@ -28,6 +28,13 @@ spec:
       {{- end }}
       initContainers:
         - name: wait-for-postgres
+          securityContext:
+            runAsUser: 65532
+            runAsGroup: 65532
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           image: "{{ .Values.postgres.image }}"
           envFrom:
             - secretRef:
@@ -46,6 +53,13 @@ spec:
         # tag as the app image, no separate ConfigMap to keep in sync by
         # hand.
         - name: migrate
+          securityContext:
+            runAsUser: 65532
+            runAsGroup: 65532
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           image: "{{ include "shorturl.imageRef" .Values.postgres.migrateImage }}"
           env:
             - name: POSTGRES_HOST
