@@ -36,6 +36,12 @@ initContainers:
     # that ever causes drift, pin to an explicit kubectl version instead of
     # stable.txt.
     image: curlimages/curl:8.10.1
+    securityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop:
+          - ALL
     command:
       - sh
       - -c
