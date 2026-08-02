@@ -89,6 +89,9 @@ Required tools:
 - AWS CLI v2 with a configured profile;
 - at least 4 CPUs and 8 GB of memory allocated to Docker/WSL2.
 
+Terraform pins the kind node image to Kubernetes `v1.31.14` by digest. The
+locally installed `kubectl` should stay within one minor version of the cluster.
+
 The deployment also requires:
 
 - an S3 bucket for Terraform state;

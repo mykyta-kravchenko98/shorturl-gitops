@@ -5,6 +5,9 @@ the root Application from an explicit Git repository and commit SHA. It uses a
 local Terraform backend, independently of the S3 backend used by
 `terraform/envs/local`.
 
+The shared cluster module pins the kind node image to Kubernetes `v1.31.14` by
+digest so local and CI runs use the same control-plane version.
+
 Both source variables are intentionally required so CI cannot silently test
 `main` instead of the requested commit. The fixture selects the ShortURL
 `values-ci.yaml` overlay through the app-of-apps chart. CI mode renders only

@@ -30,12 +30,7 @@ serviceAccountName: ecr-pull-refresher
 restartPolicy: Never
 initContainers:
   - name: fetch-kubectl
-    # curl is baked into this image, so a run no longer depends on the
-    # Alpine package mirror being up - one less thing to flake on every
-    # CronJob tick. Still pulls whatever's "stable" at run time though; if
-    # that ever causes drift, pin to an explicit kubectl version instead of
-    # stable.txt.
-    image: curlimages/curl:8.10.1
+    image: {{ .kubectl.downloadImage | quote }}
     securityContext:
       runAsNonRoot: true
       allowPrivilegeEscalation: false
@@ -51,8 +46,8 @@ initContainers:
       - sh
       - -c
       - |
-        KVER="$(curl -L -s https://dl.k8s.io/release/stable.txt)"
-        curl -L -o /shared/kubectl "https://dl.k8s.io/release/${KVER}/bin/linux/amd64/kubectl"
+        curl -fsSL -o /shared/kubectl "https://dl.k8s.io/release/{{ .kubectl.version }}/bin/linux/amd64/kubectl"
+        echo "{{ .kubectl.sha256 }}  /shared/kubectl" | sha256sum -c -
         chmod +x /shared/kubectl
     volumeMounts:
       - name: shared
@@ -66,7 +61,7 @@ initContainers:
         memory: 64Mi
 containers:
   - name: refresh
-    image: amazon/aws-cli:latest
+    image: {{ .awsCliImage | quote }}
     securityContext:
       runAsNonRoot: true
       allowPrivilegeEscalation: false

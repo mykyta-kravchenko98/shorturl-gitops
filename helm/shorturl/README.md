@@ -60,3 +60,10 @@ provide a pull Secret without granting the chart permission to refresh it.
 The `values-ci.yaml` profile uses images named `shorturl-ci:test` and
 `shorturl-migrate-ci:test` with pull policy `Never`. The CI workflow must build
 and load both images into kind instead of pulling them from a registry.
+
+## Runtime pins
+
+All remotely pulled images owned by this chart use immutable manifest digests.
+ECR refresh uses AWS CLI `2.36.9` and downloads kubectl `v1.31.14` with an
+expected SHA256 checksum instead of resolving `stable.txt` at runtime. The
+kubectl minor version matches the Kubernetes version used by the kind fixture.
