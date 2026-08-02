@@ -47,7 +47,7 @@ Restart. `docker version` inside WSL2 should then show a `Server:` block
 
 Docker Desktop on the WSL2 backend doesn't expose CPU/Memory sliders in
 its UI - set them via `.wslconfig` instead:
-```
+```ini
 # C:\Users\<you>\.wslconfig
 [wsl2]
 memory=8GB
@@ -142,7 +142,7 @@ both images.
 Update `helm/shorturl/values.yaml` (`image.repository`,
 `postgres.migrateImage.repository`) to point at your account/region if
 they don't already match:
-```
+```text
 <account-id>.dkr.ecr.<region>.amazonaws.com/shorturl
 <account-id>.dkr.ecr.<region>.amazonaws.com/shorturl-migrate
 ```
@@ -286,7 +286,7 @@ cluster from another device (laptop) on the same WiFi:
 1. Find this machine's LAN IP: `ipconfig` (Windows, from PowerShell) ->
    "IPv4 Address" under your WiFi/Ethernet adapter.
 2. In `terraform/envs/local/terraform.tfvars`:
-   ```
+   ```hcl
    api_server_address = "192.168.1.50"
    ```
 3. Windows Defender Firewall -> Advanced Settings -> Inbound Rules -> New
