@@ -82,4 +82,3 @@ ingress:
 metrics:
   serviceMonitor:
     enabled: false
-
