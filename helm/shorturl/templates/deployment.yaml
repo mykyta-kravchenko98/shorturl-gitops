@@ -25,18 +25,18 @@ spec:
         app.kubernetes.io/component: app
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
-        {{- if .Values.otel.sidecarInject }}
+        {{- if .Values.otel.sidecar.enabled }}
         checksum/otel-sidecar-config: {{ include (print $.Template.BasePath "/otel-sidecar-config.yaml") . | sha256sum }}
         {{- end }}
     spec:
-      {{- if .Values.ecrPull.enabled }}
+      {{- if .Values.imagePullSecret.enabled }}
       imagePullSecrets:
-        - name: {{ .Values.ecrPull.secretName }}
+        - name: {{ .Values.imagePullSecret.name }}
+      {{- end }}
       securityContext:
         runAsNonRoot: true
         seccompProfile:
           type: RuntimeDefault
-      {{- end }}
       containers:
         - name: shorturl
           securityContext:
@@ -59,7 +59,7 @@ spec:
                   fieldPath: metadata.name
           envFrom:
             - secretRef:
-                name: postgres-credentials
+                name: {{ .Values.postgres.credentials.secretName }}
           volumeMounts:
             - name: config
               mountPath: /app/config/config.yml
@@ -78,7 +78,7 @@ spec:
             periodSeconds: 10
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-        {{- if .Values.otel.sidecarInject }}
+        {{- if .Values.otel.sidecar.enabled }}
         - name: otel-collector-sidecar
           securityContext:
             allowPrivilegeEscalation: false
@@ -86,7 +86,7 @@ spec:
               drop:
                 - ALL
             readOnlyRootFilesystem: true
-          image: "{{ .Values.otel.sidecarImage }}"
+          image: "{{ .Values.otel.sidecar.image }}"
           args: ["--config=/etc/otel/config.yaml"]
           ports:
             - name: otlp-grpc
@@ -94,12 +94,7 @@ spec:
             - name: otlp-http
               containerPort: 4318
           resources:
-            requests:
-              cpu: 20m
-              memory: 64Mi
-            limits:
-              cpu: 250m
-              memory: 128Mi
+            {{- toYaml .Values.otel.sidecar.resources | nindent 12 }}
           volumeMounts:
             - name: otel-sidecar-config
               mountPath: /etc/otel
@@ -109,7 +104,7 @@ spec:
         - name: config
           configMap:
             name: {{ include "shorturl.fullname" . }}-config
-        {{- if .Values.otel.sidecarInject }}
+        {{- if .Values.otel.sidecar.enabled }}
         - name: otel-sidecar-config
           configMap:
             name: otel-sidecar-config

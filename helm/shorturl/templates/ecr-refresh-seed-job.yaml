@@ -1,7 +1,7 @@
-{{- if .Values.ecrPull.enabled }}
+{{- if .Values.ecrRefresh.enabled }}
 # Runs once on install/upgrade so the pull secret exists immediately,
 # before the CronJob's first scheduled tick - otherwise a fresh install
-# would sit in ImagePullBackOff for up to ecrPull.schedule's interval.
+# would sit in ImagePullBackOff for up to ecrRefresh.schedule's interval.
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -20,5 +20,5 @@ spec:
         app.kubernetes.io/name: shorturl
         app.kubernetes.io/component: ecr-pull-refresh
     spec:
-      {{- include "shorturl.ecrRefreshPodSpec" .Values.ecrPull | nindent 6 }}
+      {{- include "shorturl.ecrRefreshPodSpec" .Values.ecrRefresh | nindent 6 }}
 {{- end }}

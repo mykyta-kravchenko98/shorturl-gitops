@@ -6,3 +6,23 @@ image:
 
 autoscaling:
   enabled: false
+
+# The local environment keeps the complete AWS/controller integration enabled.
+# CI can override each capability independently without changing this profile.
+secretsManagement:
+  secretStore:
+    create: true
+  externalSecret:
+    enabled: true
+  credentialRotation:
+    enabled: true
+
+imagePullSecret:
+  enabled: true
+
+ecrRefresh:
+  enabled: true
+
+otel:
+  sidecar:
+    enabled: true

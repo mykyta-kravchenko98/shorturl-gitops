@@ -1,4 +1,4 @@
-{{- if .Values.postgres.deployed }}
+{{- if .Values.postgres.migrations.enabled }}
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -6,10 +6,9 @@ metadata:
   labels:
     {{- include "shorturl.labels" . | nindent 4 }}
   annotations:
-    # post-install/post-upgrade, not pre-*: a pre-install hook runs before
-    # Helm applies the release's normal manifests, so the postgres
-    # Service/StatefulSet wouldn't exist yet - wait-for-postgres would spin
-    # forever trying to resolve a Service that hasn't been created.
+    # post-install/post-upgrade, not pre-*: when PostgreSQL is deployed by
+    # this chart, a pre-install hook would run before its Service and
+    # StatefulSet exist. The same Job can also target an external database.
     "helm.sh/hook": post-install,post-upgrade
     "helm.sh/hook-weight": "0"
     "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
@@ -22,9 +21,9 @@ spec:
         app.kubernetes.io/component: postgres-migrate
     spec:
       restartPolicy: Never
-      {{- if .Values.ecrPull.enabled }}
+      {{- if .Values.imagePullSecret.enabled }}
       imagePullSecrets:
-        - name: {{ .Values.ecrPull.secretName }}
+        - name: {{ .Values.imagePullSecret.name }}
       {{- end }}
       initContainers:
         - name: wait-for-postgres
@@ -48,7 +47,7 @@ spec:
               memory: 64Mi
           envFrom:
             - secretRef:
-                name: postgres-credentials
+                name: {{ .Values.postgres.credentials.secretName }}
           command:
             - sh
             - -c
@@ -90,5 +89,5 @@ spec:
               value: {{ .Values.postgres.sslMode | quote }}
           envFrom:
             - secretRef:
-                name: postgres-credentials
+                name: {{ .Values.postgres.credentials.secretName }}
 {{- end }}

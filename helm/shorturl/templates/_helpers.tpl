@@ -21,7 +21,7 @@ app.kubernetes.io/name: shorturl
 
 {{/*
 Shared pod spec for both the one-shot seed Job and the recurring CronJob
-that refresh the ECR docker-registry pull secret. Takes .Values.ecrPull as
+that refresh the ECR docker-registry pull secret. Takes .Values.ecrRefresh as
 context (region/registry/secretName/credentialsSecretName). Kept as one
 named template so the two callers can't drift apart.
 */}}

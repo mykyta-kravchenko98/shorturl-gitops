@@ -1,4 +1,4 @@
-{{- if .Values.ecrPull.enabled }}
+{{- if .Values.ecrRefresh.enabled }}
 # Normal resource, not a hook - the seed Job (ecr-refresh-seed-job.yaml)
 # covers "right after install/upgrade"; this covers "still running many
 # hours later" (ECR tokens are only valid 12h).
@@ -9,7 +9,7 @@ metadata:
   labels:
     {{- include "shorturl.labels" . | nindent 4 }}
 spec:
-  schedule: {{ .Values.ecrPull.schedule | quote }}
+  schedule: {{ .Values.ecrRefresh.schedule | quote }}
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 1
   failedJobsHistoryLimit: 3
@@ -26,5 +26,5 @@ spec:
             runAsNonRoot: true
             seccompProfile:
               type: RuntimeDefault
-          {{- include "shorturl.ecrRefreshPodSpec" .Values.ecrPull | nindent 10 }}
+          {{- include "shorturl.ecrRefreshPodSpec" .Values.ecrRefresh | nindent 10 }}
 {{- end }}
