@@ -1,4 +1,4 @@
-{{- if .Values.ecrPull.enabled }}
+{{- if .Values.ecrRefresh.enabled }}
 apiVersion: v1
 kind: ConfigMap
 metadata:

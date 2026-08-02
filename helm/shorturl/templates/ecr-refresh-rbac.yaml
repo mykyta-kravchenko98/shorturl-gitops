@@ -1,4 +1,4 @@
-{{- if .Values.ecrPull.enabled }}
+{{- if .Values.ecrRefresh.enabled }}
 # hook-weight -20, run as a pre-install hook (before the seed Job at
 # weight -10 below) so the ServiceAccount/Role it needs already exist -
 # same "hooks run before normal manifests" ordering trap as
@@ -26,7 +26,7 @@ metadata:
     "helm.sh/hook-weight": "-20"
 rules:
   # Only this namespace, only Secrets - enough to create/replace
-  # ecrPull.secretName, nothing more.
+  # ecrRefresh.secretName, nothing more.
   - apiGroups: [""]
     resources: ["secrets"]
     verbs: ["get", "list", "create", "update", "patch", "delete"]

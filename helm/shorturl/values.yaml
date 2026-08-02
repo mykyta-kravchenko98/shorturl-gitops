@@ -19,9 +19,17 @@ autoscaling:
   maxReplicas: 3
   targetCPUUtilizationPercentage: 75
 otel:
-  sidecarInject: true
-  sidecarImage: otel/opentelemetry-collector-contrib:0.105.0
   gatewayEndpoint: otel-collector-gateway.observability.svc.cluster.local:4317
+  sidecar:
+    enabled: true
+    image: otel/opentelemetry-collector-contrib:0.105.0
+    resources:
+      requests:
+        cpu: 20m
+        memory: 64Mi
+      limits:
+        cpu: 250m
+        memory: 128Mi
 postgres:
   # When true, this chart also deploys Postgres itself (plain StatefulSet,
   # no operator - see templates/postgres-*.yaml). Set false and point
@@ -33,6 +41,10 @@ postgres:
   port: "5432"
   dbName: ShortURLDataDB
   sslMode: disable
+  credentials:
+    secretName: postgres-credentials
+  migrations:
+    enabled: true
   migrateImage:
     repository: 528081867341.dkr.ecr.eu-central-1.amazonaws.com/shorturl-migrate
     tag: 1426ccd6b9731b203881caabdf25ca1a9d7c4b1e
@@ -41,7 +53,22 @@ secretsManagement:
   awsRegion: eu-central-1
   postgresSecretName: shorturl/postgres
   credentialsSecretName: aws-secretstore-credentials
-ecrPull:
+  secretStore:
+    create: true
+    name: aws-secretsmanager
+  externalSecret:
+    enabled: true
+    secretStoreName: aws-secretsmanager
+    secretStoreKind: SecretStore
+    targetSecretName: postgres-credentials-pending
+    refreshInterval: 1h
+  credentialRotation:
+    enabled: true
+    pendingSecretName: postgres-credentials-pending
+imagePullSecret:
+  enabled: true
+  name: ecr-pull-secret
+ecrRefresh:
   enabled: true
   region: eu-central-1
   registry: 528081867341.dkr.ecr.eu-central-1.amazonaws.com
