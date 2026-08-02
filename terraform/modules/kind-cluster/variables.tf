@@ -27,6 +27,12 @@ variable "target_revision" {
   default     = "main"
 }
 
+variable "kind_node_image" {
+  description = "Digest-pinned kind node image and Kubernetes version"
+  type        = string
+  default     = "kindest/node:v1.31.14@sha256:6f86cf509dbb42767b6e79debc3f2c32e4ee01386f0489b3b2be24b0a55aac2b"
+}
+
 variable "shorturl_values_file" {
   description = "ShortURL Helm values overlay selected by the app-of-apps chart"
   type        = string
