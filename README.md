@@ -34,9 +34,11 @@ Terraform
 ```
 
 Argo CD uses the **app of apps** pattern: Terraform installs the root
-Application, which recursively loads the declarations from `argocd/apps`.
-Automated synchronization, self-healing, and pruning of obsolete resources are
-enabled for the child Applications.
+Application, which renders the Helm chart in `helm/app-of-apps`. The root passes its
+Git repository and revision to every child Application sourced from this
+repository, so a deployment pinned to a commit uses that commit throughout the
+application tree. Automated synchronization, self-healing, and pruning of
+obsolete resources are enabled for the child Applications.
 
 ## Components
 

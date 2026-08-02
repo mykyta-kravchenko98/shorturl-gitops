@@ -1,0 +1,3 @@
+git:
+  repoURL: "https://github.com/mykyta-kravchenko98/shorturl-gitops.git"
+  targetRevision: "main"

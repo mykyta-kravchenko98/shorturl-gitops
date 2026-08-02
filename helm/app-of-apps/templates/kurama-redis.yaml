@@ -1,19 +1,18 @@
+---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: amenotejikara
+  name: kurama-redis
   namespace: argocd
-  annotations:
-    argocd.argoproj.io/sync-wave: "-1"
 spec:
   project: default
   source:
-    repoURL: https://github.com/mykyta-kravchenko98/shorturl-gitops.git
-    targetRevision: main
-    path: k8s/amenotejikara
+    repoURL: {{ .Values.git.repoURL | quote }}
+    targetRevision: {{ .Values.git.targetRevision | quote }}
+    path: k8s/kurama-redis
   destination:
     server: https://kubernetes.default.svc
-    namespace: shorturl
+    namespace: kurama-system
   syncPolicy:
     automated:
       prune: true

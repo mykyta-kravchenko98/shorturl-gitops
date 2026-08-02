@@ -8,11 +8,17 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/mykyta-kravchenko98/shorturl-gitops.git
-    targetRevision: main
-    path: argocd/apps
-    directory:
-      recurse: true
+    repoURL: "https://github.com/mykyta-kravchenko98/shorturl-gitops.git"
+    targetRevision: "main"
+    path: helm/app-of-apps
+    helm:
+      parameters:
+        - name: git.repoURL
+          value: "https://github.com/mykyta-kravchenko98/shorturl-gitops.git"
+          forceString: true
+        - name: git.targetRevision
+          value: "main"
+          forceString: true
   destination:
     server: https://kubernetes.default.svc
   ignoreDifferences:

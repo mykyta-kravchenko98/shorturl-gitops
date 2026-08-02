@@ -11,3 +11,4 @@ argocd-ui:
 
 lint:
 	helm lint helm/shorturl
+	helm lint helm/app-of-apps

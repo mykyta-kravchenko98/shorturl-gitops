@@ -8,11 +8,17 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: ${repo_url}
-    targetRevision: ${target_revision}
-    path: argocd/apps
-    directory:
-      recurse: true
+    repoURL: "${repo_url}"
+    targetRevision: "${target_revision}"
+    path: helm/app-of-apps
+    helm:
+      parameters:
+        - name: git.repoURL
+          value: "${repo_url}"
+          forceString: true
+        - name: git.targetRevision
+          value: "${target_revision}"
+          forceString: true
   destination:
     server: https://kubernetes.default.svc
   # `directory.recurse: false` on child Applications (e.g. namespaces.yaml)

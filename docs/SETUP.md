@@ -204,7 +204,8 @@ make up
 
 This runs `terraform init` (reuses the S3 backend config from step 3b)
 and `terraform apply`: creates the kind cluster, installs ArgoCD via Helm,
-applies the root Application pointed at `argocd/apps/`.
+and applies the root Application pointed at the app-of-apps Helm chart in
+`helm/app-of-apps/`.
 
 Watch it:
 ```bash
@@ -212,7 +213,7 @@ kubectl -n argocd get applications -w
 ```
 Expect `namespaces`, `otel-collector-gateway`, `shorturl` to reach
 `Synced`/`Healthy`. `cert-manager` and `otel-sidecar-injector` are
-intentionally **not** in `argocd/apps/` yet - they're parked in
+intentionally **not** in `helm/app-of-apps/templates/` yet - they're parked in
 `argocd/future/` until a controller image exists somewhere to pull from
 (see "Custom controllers live in their own repos" below).
 
@@ -271,7 +272,8 @@ Decision: each custom Kubernetes controller (e.g. `otel-sidecar-injector`)
 gets its **own** repository - source, `Dockerfile`, its own CI - not a
 `controller/` folder inside this repo. This repo only ever holds the
 *deployment* side: a Helm chart under `helm/<controller-name>/` and an
-ArgoCD `Application` in `argocd/apps/` (or `argocd/future/` until its
+ArgoCD `Application` template in `helm/app-of-apps/templates/` (or
+`argocd/future/` until its
 image is published), pointing at whatever image that controller's own repo
 publishes. Same pattern as `ShortUrl` itself - this repo never contains
 app/controller source, only how to run it.
