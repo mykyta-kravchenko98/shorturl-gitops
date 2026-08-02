@@ -1,3 +1,4 @@
+---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -9,8 +10,8 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/mykyta-kravchenko98/shorturl-gitops.git
-    targetRevision: main
+    repoURL: {{ .Values.git.repoURL | quote }}
+    targetRevision: {{ .Values.git.targetRevision | quote }}
     path: k8s/kurama
   destination:
     server: https://kubernetes.default.svc

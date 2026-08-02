@@ -5,7 +5,7 @@
 
 # Only lint what's actually relevant here.
 ENABLE_LINTERS:
-  - KUBERNETES_HELM          # helm lint on helm/shorturl
+  - KUBERNETES_HELM          # helm lint on all charts
   - KUBERNETES_KUBECONFORM   # schema-validates rendered/raw k8s YAML
   - TERRAFORM_TFLINT
   - TERRAFORM_TERRAFORM_FMT
@@ -32,11 +32,10 @@ KUBERNETES_HELM_ARGUMENTS: "--strict"
 KUBERNETES_KUBECONFORM_ARGUMENTS:
   - "-ignore-missing-schemas"
 
-# Files under helm/*/templates/ contain Go template syntax ({{ ... }}) and
-# are NOT valid standalone YAML/k8s manifests - only KUBERNETES_HELM (helm
-# lint, which understands the templating) should touch them. yamllint and
-# kubeconform need the rendered/raw output, not the template source, so
-# they're excluded from that one directory pattern.
+# Helm template directories contain Go template syntax ({{ ... }}) and are
+# NOT valid standalone YAML/k8s manifests - only KUBERNETES_HELM (helm lint,
+# which understands the templating) should touch them. yamllint and
+# kubeconform need rendered output, not template source.
 YAML_YAMLLINT_FILTER_REGEX_EXCLUDE: "helm/.*/templates/"
 KUBERNETES_KUBECONFORM_FILTER_REGEX_EXCLUDE: "helm/.*/templates/"
 

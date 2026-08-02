@@ -35,7 +35,7 @@ resource "kind_cluster" "this" {
     # docs/SETUP.md "Remote access over LAN".
     networking {
       api_server_address = var.api_server_address
-      api_server_port     = 6443
+      api_server_port    = 6443
     }
 
     node {
@@ -45,11 +45,11 @@ resource "kind_cluster" "this" {
       # extra port-forwarding.
       extra_port_mappings {
         container_port = 80
-        host_port       = 8080
+        host_port      = 8080
       }
       extra_port_mappings {
         container_port = 443
-        host_port       = 8443
+        host_port      = 8443
       }
     }
 
@@ -128,7 +128,7 @@ resource "helm_release" "argocd" {
 
 # Root Application (app-of-apps). Everything else - the shorturl helm
 # release, the otel-sidecar-injector controller, the collector gateway - is
-# declared as child Applications under argocd/apps and reconciled from here.
+# declared as child Applications in helm/app-of-apps and reconciled from here.
 resource "kubectl_manifest" "root_app" {
   yaml_body = templatefile("${path.module}/templates/root-app.yaml.tpl", {
     repo_url        = var.gitops_repo_url

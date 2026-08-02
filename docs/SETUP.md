@@ -47,7 +47,7 @@ Restart. `docker version` inside WSL2 should then show a `Server:` block
 
 Docker Desktop on the WSL2 backend doesn't expose CPU/Memory sliders in
 its UI - set them via `.wslconfig` instead:
-```
+```ini
 # C:\Users\<you>\.wslconfig
 [wsl2]
 memory=8GB
@@ -142,7 +142,7 @@ both images.
 Update `helm/shorturl/values.yaml` (`image.repository`,
 `postgres.migrateImage.repository`) to point at your account/region if
 they don't already match:
-```
+```text
 <account-id>.dkr.ecr.<region>.amazonaws.com/shorturl
 <account-id>.dkr.ecr.<region>.amazonaws.com/shorturl-migrate
 ```
@@ -204,7 +204,8 @@ make up
 
 This runs `terraform init` (reuses the S3 backend config from step 3b)
 and `terraform apply`: creates the kind cluster, installs ArgoCD via Helm,
-applies the root Application pointed at `argocd/apps/`.
+and applies the root Application pointed at the app-of-apps Helm chart in
+`helm/app-of-apps/`.
 
 Watch it:
 ```bash
@@ -212,7 +213,7 @@ kubectl -n argocd get applications -w
 ```
 Expect `namespaces`, `otel-collector-gateway`, `shorturl` to reach
 `Synced`/`Healthy`. `cert-manager` and `otel-sidecar-injector` are
-intentionally **not** in `argocd/apps/` yet - they're parked in
+intentionally **not** in `helm/app-of-apps/templates/` yet - they're parked in
 `argocd/future/` until a controller image exists somewhere to pull from
 (see "Custom controllers live in their own repos" below).
 
@@ -271,7 +272,8 @@ Decision: each custom Kubernetes controller (e.g. `otel-sidecar-injector`)
 gets its **own** repository - source, `Dockerfile`, its own CI - not a
 `controller/` folder inside this repo. This repo only ever holds the
 *deployment* side: a Helm chart under `helm/<controller-name>/` and an
-ArgoCD `Application` in `argocd/apps/` (or `argocd/future/` until its
+ArgoCD `Application` template in `helm/app-of-apps/templates/` (or
+`argocd/future/` until its
 image is published), pointing at whatever image that controller's own repo
 publishes. Same pattern as `ShortUrl` itself - this repo never contains
 app/controller source, only how to run it.
@@ -284,7 +286,7 @@ cluster from another device (laptop) on the same WiFi:
 1. Find this machine's LAN IP: `ipconfig` (Windows, from PowerShell) ->
    "IPv4 Address" under your WiFi/Ethernet adapter.
 2. In `terraform/envs/local/terraform.tfvars`:
-   ```
+   ```hcl
    api_server_address = "192.168.1.50"
    ```
 3. Windows Defender Firewall -> Advanced Settings -> Inbound Rules -> New
