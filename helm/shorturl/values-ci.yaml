@@ -1,0 +1,84 @@
+# Overrides for the disposable kind cluster used by CI.
+# The application and migration images are built by the workflow and loaded
+# directly into kind, so this profile never authenticates to AWS/ECR.
+replicaCount: 1
+
+image:
+  repository: shorturl-ci
+  tag: test
+  digest: ""
+  pullPolicy: Never
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 32Mi
+  limits:
+    cpu: 250m
+    memory: 128Mi
+
+autoscaling:
+  enabled: false
+
+postgres:
+  deployed: true
+  storage: 256Mi
+  resources:
+    requests:
+      cpu: 20m
+      memory: 64Mi
+    limits:
+      cpu: 250m
+      memory: 128Mi
+  credentials:
+    create: true
+    secretName: postgres-credentials
+    username: shorturl
+    password: shorturl-ci
+    database: ShortURLDataDB
+  migrations:
+    enabled: true
+    resources:
+      requests:
+        cpu: 5m
+        memory: 16Mi
+      limits:
+        cpu: 100m
+        memory: 64Mi
+    waitResources:
+      requests:
+        cpu: 5m
+        memory: 16Mi
+      limits:
+        cpu: 100m
+        memory: 64Mi
+  migrateImage:
+    repository: shorturl-migrate-ci
+    tag: test
+    digest: ""
+    pullPolicy: Never
+
+secretsManagement:
+  secretStore:
+    create: false
+  externalSecret:
+    enabled: false
+  credentialRotation:
+    enabled: false
+
+imagePullSecret:
+  enabled: false
+
+ecrRefresh:
+  enabled: false
+
+otel:
+  sidecar:
+    enabled: false
+
+ingress:
+  enabled: false
+
+metrics:
+  serviceMonitor:
+    enabled: false

@@ -27,6 +27,18 @@ variable "target_revision" {
   default     = "main"
 }
 
+variable "shorturl_values_file" {
+  description = "ShortURL Helm values overlay selected by the app-of-apps chart"
+  type        = string
+  default     = "values-local.yaml"
+}
+
+variable "ci_mode" {
+  description = "Render only the Applications required by the disposable CI environment"
+  type        = bool
+  default     = false
+}
+
 variable "api_server_address" {
   description = <<-EOT
     IP the kind API server binds to. "127.0.0.1" (default) means only this

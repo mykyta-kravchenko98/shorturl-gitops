@@ -131,8 +131,10 @@ resource "helm_release" "argocd" {
 # declared as child Applications in helm/app-of-apps and reconciled from here.
 resource "kubectl_manifest" "root_app" {
   yaml_body = templatefile("${path.module}/templates/root-app.yaml.tpl", {
-    repo_url        = var.gitops_repo_url
-    target_revision = var.target_revision
+    repo_url             = var.gitops_repo_url
+    target_revision      = var.target_revision
+    shorturl_values_file = var.shorturl_values_file
+    ci_mode              = var.ci_mode
   })
 
   depends_on = [helm_release.argocd]

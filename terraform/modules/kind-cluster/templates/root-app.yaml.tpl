@@ -19,6 +19,11 @@ spec:
         - name: git.targetRevision
           value: "${target_revision}"
           forceString: true
+        - name: shorturl.valuesFile
+          value: "${shorturl_values_file}"
+          forceString: true
+        - name: ci.enabled
+          value: "${ci_mode}"
   destination:
     server: https://kubernetes.default.svc
   # `directory.recurse: false` on child Applications (e.g. namespaces.yaml)

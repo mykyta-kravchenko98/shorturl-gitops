@@ -19,6 +19,11 @@ spec:
         - name: git.targetRevision
           value: "main"
           forceString: true
+        - name: shorturl.valuesFile
+          value: "values-local.yaml"
+          forceString: true
+        - name: ci.enabled
+          value: "false"
   destination:
     server: https://kubernetes.default.svc
   ignoreDifferences:
