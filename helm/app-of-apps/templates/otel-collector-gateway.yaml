@@ -1,3 +1,4 @@
+{{- if not .Values.ci.enabled }}
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -20,3 +21,4 @@ spec:
     # No CreateNamespace=true: observability is already created by the
     # namespaces Application - see shorturl.yaml for why having both
     # manage it causes perpetual Synced/OutOfSync flapping.
+{{- end }}

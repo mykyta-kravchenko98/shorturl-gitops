@@ -6,7 +6,10 @@ local Terraform backend, independently of the S3 backend used by
 `terraform/envs/local`.
 
 Both source variables are intentionally required so CI cannot silently test
-`main` instead of the requested commit.
+`main` instead of the requested commit. The fixture selects the ShortURL
+`values-ci.yaml` overlay through the app-of-apps chart. CI mode renders only
+the `namespaces` and `shorturl` child Applications; controllers and the
+observability stack remain part of the default local profile.
 
 ```bash
 terraform init
@@ -26,3 +29,6 @@ terraform destroy -auto-approve \
 The local `terraform.tfstate` and `.terraform` directory are excluded by the
 repository-level `.gitignore`.
 
+Before waiting for the ShortURL Application to become healthy, CI must build
+the application and migration images and load them into this cluster as
+`shorturl-ci:test` and `shorturl-migrate-ci:test`.

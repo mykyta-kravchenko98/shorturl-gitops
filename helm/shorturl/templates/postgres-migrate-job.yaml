@@ -39,12 +39,7 @@ spec:
                 - ALL
           image: "{{ .Values.postgres.image }}"
           resources:
-            requests:
-              cpu: 10m
-              memory: 16Mi
-            limits:
-              cpu: 200m
-              memory: 64Mi
+            {{- toYaml .Values.postgres.migrations.waitResources | nindent 12 }}
           envFrom:
             - secretRef:
                 name: {{ .Values.postgres.credentials.secretName }}
@@ -73,13 +68,9 @@ spec:
               drop:
                 - ALL
           resources:
-            requests:
-              cpu: 10m
-              memory: 16Mi
-            limits:
-              cpu: 200m
-              memory: 64Mi
+            {{- toYaml .Values.postgres.migrations.resources | nindent 12 }}
           image: "{{ include "shorturl.imageRef" .Values.postgres.migrateImage }}"
+          imagePullPolicy: {{ .Values.postgres.migrateImage.pullPolicy }}
           env:
             - name: POSTGRES_HOST
               value: {{ .Values.postgres.host | quote }}

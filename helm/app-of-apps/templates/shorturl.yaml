@@ -13,7 +13,7 @@ spec:
     helm:
       valueFiles:
         - values.yaml
-        - values-local.yaml
+        - {{ .Values.shorturl.valuesFile | quote }}
   destination:
     server: https://kubernetes.default.svc
     namespace: shorturl

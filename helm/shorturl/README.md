@@ -8,6 +8,7 @@ database, credential, registry, and observability integrations.
 | Value | Resource or behavior controlled |
 | --- | --- |
 | `postgres.deployed` | PostgreSQL StatefulSet and Service |
+| `postgres.credentials.create` | Non-production credentials Secret |
 | `postgres.migrations.enabled` | Database migration Job |
 | `secretsManagement.secretStore.create` | AWS SecretStore |
 | `secretsManagement.externalSecret.enabled` | PostgreSQL ExternalSecret |
@@ -48,8 +49,14 @@ otel:
     enabled: false
 ```
 
-When `secretsManagement.externalSecret.enabled` is false, the Secret named by
-`postgres.credentials.secretName` must already exist. Separating
+When `secretsManagement.externalSecret.enabled` and
+`postgres.credentials.create` are both false, the Secret named by
+`postgres.credentials.secretName` must already exist. The chart-managed Secret
+is intended only for disposable environments with non-sensitive credentials.
+Separating
 `imagePullSecret.enabled` from `ecrRefresh.enabled` also allows a platform to
 provide a pull Secret without granting the chart permission to refresh it.
 
+The `values-ci.yaml` profile uses images named `shorturl-ci:test` and
+`shorturl-migrate-ci:test` with pull policy `Never`. The CI workflow must build
+and load both images into kind instead of pulling them from a registry.
