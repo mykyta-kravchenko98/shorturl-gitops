@@ -59,15 +59,18 @@ obsolete resources are enabled for the child Applications.
 ```text
 .
 ├── argocd/
-│   ├── bootstrap/       # root Argo CD Application
-│   └── apps/            # child Applications
-├── helm/shorturl/       # ShortURL and PostgreSQL Helm chart
+│   └── bootstrap/       # root Argo CD Application
+├── helm/
+│   ├── app-of-apps/     # child Argo CD Applications
+│   └── shorturl/        # ShortURL and PostgreSQL chart
 ├── k8s/
 │   ├── amenotejikara/   # credential rotation controller
 │   ├── kurama/          # traffic controller and scenario
 │   └── otel-collector/  # OpenTelemetry gateway
+├── tests/fixtures/
+│   └── terraform-kind/  # disposable CI cluster with local state
 ├── terraform/
-│   ├── envs/local/      # local environment
+│   ├── envs/local/      # local environment with S3 state
 │   └── modules/         # kind cluster module
 ├── scripts/             # start, destroy, and port-forward scripts
 └── docs/SETUP.md        # complete initial setup guide
