@@ -39,7 +39,7 @@ spec:
             capabilities:
               drop:
                 - ALL
-          image: 528081867341.dkr.ecr.eu-central-1.amazonaws.com/amenotejikara:caa947c23a88cb2aa5c8e9e7089aee7a3e6c1006
+          image: 528081867341.dkr.ecr.eu-central-1.amazonaws.com/amenotejikara@sha256:268398f2e6dbf7c3cb2e2a941a2d53c2a29b42668a37f471db4e1943707afac8
           imagePullPolicy: IfNotPresent
           ports:
             - name: health
