@@ -23,6 +23,7 @@ while working on it. `make lint` remains a backwards-compatible alias:
 make test-helm
 make test-kustomize
 make test-kubeconform
+make test-terraform
 make lint
 ```
 
@@ -50,6 +51,15 @@ Custom schemas are regenerated explicitly with
 `make update-kubeconform-schemas`. This maintenance command is separate from
 the read-only static gate because it uses the network and updates vendored
 files.
+
+`make test-terraform` checks formatting for all repository Terraform files,
+initializes the local and CI fixture roots with their committed provider lock
+files and `-backend=false`, and runs `terraform validate`. Provider and module
+artifacts are stored in a temporary `TF_DATA_DIR`, so the check does not alter
+the developer's initialized working directory or contact the configured S3
+backend. TFLint checks every Terraform directory using the repository config,
+and Checkov scans both the deployment code and the CI fixture. The gate never
+runs `plan`, `apply`, or `destroy`.
 
 `make test-static` is the aggregate entry point used locally and in CI. During
 the incremental implementation of the full gate it includes only completed
