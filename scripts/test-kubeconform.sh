@@ -82,6 +82,9 @@ kubeconform_args=(
   -strict
   -summary
   -kubernetes-version "${KUBERNETES_VERSION}"
+  # Kubernetes does not publish the CRD object's own schema in the OpenAPI
+  # registry. Custom resources are still validated by the vendored schemas.
+  -skip CustomResourceDefinition
   -schema-location default
   -schema-location "${schema_location}"
 )
