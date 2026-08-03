@@ -1,0 +1,29 @@
+suite: application ConfigMap checksum
+templates:
+  - templates/deployment.yaml
+release:
+  name: shorturl-test
+tests:
+  - it: records the checksum for the default application ConfigMap
+    set:
+      otel.sidecar.enabled: false
+      server.restPort: "8585"
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations["checksum/config"]
+          value: 9f663350e2fb31d9bf52de22387b36328ba9911f3d10687766e53103d110d6e4
+      - notEqual:
+          path: spec.template.metadata.annotations["checksum/config"]
+          value: 5dd302f48cb9ac9af21e8ca20f6775b38df505b1737439de375f40bc21e89322
+
+  - it: records a different checksum after ConfigMap input changes
+    set:
+      otel.sidecar.enabled: false
+      server.restPort: "8586"
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations["checksum/config"]
+          value: 5dd302f48cb9ac9af21e8ca20f6775b38df505b1737439de375f40bc21e89322
+      - notEqual:
+          path: spec.template.metadata.annotations["checksum/config"]
+          value: 9f663350e2fb31d9bf52de22387b36328ba9911f3d10687766e53103d110d6e4

@@ -1,0 +1,81 @@
+suite: optional resources follow their feature flags
+templates:
+  - templates/deployment.yaml
+  - templates/ingress.yaml
+  - templates/servicemonitor.yaml
+  - templates/otel-sidecar-config.yaml
+  - templates/postgres-statefulset.yaml
+tests:
+  - it: omits disabled ingress and ServiceMonitor resources
+    set:
+      ingress.enabled: false
+      metrics.serviceMonitor.enabled: false
+      otel.sidecar.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+        template: templates/ingress.yaml
+      - hasDocuments:
+          count: 0
+        template: templates/servicemonitor.yaml
+
+  - it: renders enabled ingress and ServiceMonitor resources
+    set:
+      ingress.enabled: true
+      metrics.serviceMonitor.enabled: true
+      otel.sidecar.enabled: false
+    asserts:
+      - isKind:
+          of: Ingress
+        template: templates/ingress.yaml
+      - isKind:
+          of: ServiceMonitor
+        template: templates/servicemonitor.yaml
+
+  - it: removes the OTel sidecar and its ConfigMap when disabled
+    set:
+      otel.sidecar.enabled: false
+    asserts:
+      - lengthEqual:
+          path: spec.template.spec.containers
+          count: 1
+        template: templates/deployment.yaml
+      - notExists:
+          path: spec.template.metadata.annotations["checksum/otel-sidecar-config"]
+        template: templates/deployment.yaml
+      - hasDocuments:
+          count: 0
+        template: templates/otel-sidecar-config.yaml
+
+  - it: renders the OTel sidecar and its ConfigMap when enabled
+    set:
+      otel.sidecar.enabled: true
+    asserts:
+      - lengthEqual:
+          path: spec.template.spec.containers
+          count: 2
+        template: templates/deployment.yaml
+      - exists:
+          path: spec.template.metadata.annotations["checksum/otel-sidecar-config"]
+        template: templates/deployment.yaml
+      - isKind:
+          of: ConfigMap
+        template: templates/otel-sidecar-config.yaml
+
+  - it: omits the bundled PostgreSQL StatefulSet for an external database
+    set:
+      postgres.deployed: false
+      otel.sidecar.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+        template: templates/postgres-statefulset.yaml
+
+  - it: renders the bundled PostgreSQL StatefulSet when requested
+    set:
+      postgres.deployed: true
+      otel.sidecar.enabled: false
+    asserts:
+      - isKind:
+          of: StatefulSet
+        template: templates/postgres-statefulset.yaml

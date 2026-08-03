@@ -1,0 +1,88 @@
+suite: Helm hook ordering and lifecycle
+templates:
+  - templates/ecr-refresh-rbac.yaml
+  - templates/ecr-refresh-script-configmap.yaml
+  - templates/ecr-refresh-seed-job.yaml
+  - templates/postgres-migrate-job.yaml
+tests:
+  - it: creates ECR dependencies at weight minus twenty
+    set:
+      ecrRefresh.enabled: true
+    asserts:
+      - equal:
+          path: metadata.annotations["helm.sh/hook-weight"]
+          value: "-20"
+        template: templates/ecr-refresh-rbac.yaml
+        documentSelector:
+          path: kind
+          value: ServiceAccount
+      - equal:
+          path: metadata.annotations["helm.sh/hook-weight"]
+          value: "-20"
+        template: templates/ecr-refresh-rbac.yaml
+        documentSelector:
+          path: kind
+          value: Role
+      - equal:
+          path: metadata.annotations["helm.sh/hook-weight"]
+          value: "-20"
+        template: templates/ecr-refresh-rbac.yaml
+        documentSelector:
+          path: kind
+          value: RoleBinding
+      - equal:
+          path: metadata.annotations["helm.sh/hook-weight"]
+          value: "-20"
+        template: templates/ecr-refresh-script-configmap.yaml
+
+  - it: runs the ECR seed after its dependencies and cleans it up
+    set:
+      ecrRefresh.enabled: true
+    asserts:
+      - equal:
+          path: metadata.annotations["helm.sh/hook"]
+          value: pre-install,pre-upgrade
+        template: templates/ecr-refresh-seed-job.yaml
+      - equal:
+          path: metadata.annotations["helm.sh/hook-weight"]
+          value: "-10"
+        template: templates/ecr-refresh-seed-job.yaml
+      - equal:
+          path: metadata.annotations["helm.sh/hook-delete-policy"]
+          value: before-hook-creation,hook-succeeded
+        template: templates/ecr-refresh-seed-job.yaml
+
+  - it: runs migrations after install or upgrade and cleans the Job up
+    set:
+      postgres.migrations.enabled: true
+    asserts:
+      - equal:
+          path: metadata.annotations["helm.sh/hook"]
+          value: post-install,post-upgrade
+        template: templates/postgres-migrate-job.yaml
+      - equal:
+          path: metadata.annotations["helm.sh/hook-weight"]
+          value: "0"
+        template: templates/postgres-migrate-job.yaml
+      - equal:
+          path: metadata.annotations["helm.sh/hook-delete-policy"]
+          value: before-hook-creation,hook-succeeded
+        template: templates/postgres-migrate-job.yaml
+
+  - it: omits ECR hooks when refresh is disabled
+    set:
+      ecrRefresh.enabled: false
+      postgres.migrations.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+        template: templates/ecr-refresh-rbac.yaml
+      - hasDocuments:
+          count: 0
+        template: templates/ecr-refresh-script-configmap.yaml
+      - hasDocuments:
+          count: 0
+        template: templates/ecr-refresh-seed-job.yaml
+      - hasDocuments:
+          count: 0
+        template: templates/postgres-migrate-job.yaml

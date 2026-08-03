@@ -19,6 +19,7 @@ test-static: check-static-tools test-helm
 test-helm:
 	helm lint --strict helm/shorturl
 	helm lint --strict helm/app-of-apps
+	helm unittest helm/shorturl
 	bash ./scripts/test-helm-render.sh
 
 # Backwards-compatible local command documented since the first CI stage.

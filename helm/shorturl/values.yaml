@@ -1,4 +1,4 @@
-replicaCount: 1`
+replicaCount: 1
 imageVersion: 7d67a29fd78a05f7e111f71cd7763461fd244d45
 image:
   repository: 528081867341.dkr.ecr.eu-central-1.amazonaws.com/shorturl
