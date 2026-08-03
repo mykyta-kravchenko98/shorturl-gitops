@@ -1,0 +1,4 @@
+# Render the application without its OpenTelemetry sidecar.
+otel:
+  sidecar:
+    enabled: false

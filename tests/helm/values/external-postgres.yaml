@@ -1,0 +1,6 @@
+# Render against an externally managed PostgreSQL instance. Migrations remain
+# enabled because they must support both bundled and external databases.
+postgres:
+  deployed: false
+  host: postgres.example.internal
+  sslMode: require

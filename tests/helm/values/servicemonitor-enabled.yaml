@@ -1,0 +1,4 @@
+# Exercise the Prometheus Operator ServiceMonitor resource.
+metrics:
+  serviceMonitor:
+    enabled: true
