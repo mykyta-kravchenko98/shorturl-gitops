@@ -1,4 +1,4 @@
-.PHONY: up down argocd-ui lint check-static-tools test-static test-helm test-kustomize
+.PHONY: up down argocd-ui lint check-static-tools test-static test-helm test-kustomize test-kubeconform update-kubeconform-schemas
 
 up:
 	./scripts/up.sh
@@ -14,7 +14,7 @@ check-static-tools:
 
 # Aggregate only implemented checks. New static groups are added here as
 # their real recipes land; no placeholder target may pass silently.
-test-static: check-static-tools test-helm test-kustomize
+test-static: check-static-tools test-helm test-kustomize test-kubeconform
 
 test-helm:
 	helm lint --strict helm/shorturl
@@ -24,6 +24,14 @@ test-helm:
 
 test-kustomize:
 	bash ./scripts/test-kustomize.sh
+
+test-kubeconform:
+	bash ./scripts/test-kubeconform.sh
+
+# Maintenance command: downloads pinned CRDs/converter and updates vendored
+# schemas. It is deliberately not part of test-static because it mutates files.
+update-kubeconform-schemas:
+	bash ./scripts/update-kubeconform-schemas.sh
 
 # Backwards-compatible local command documented since the first CI stage.
 lint: test-helm
