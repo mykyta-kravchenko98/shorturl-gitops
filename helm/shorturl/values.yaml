@@ -1,7 +1,7 @@
-replicaCount: 1
+replicaCount: 1`
+imageVersion: 7d67a29fd78a05f7e111f71cd7763461fd244d45
 image:
   repository: 528081867341.dkr.ecr.eu-central-1.amazonaws.com/shorturl
-  tag: 1426ccd6b9731b203881caabdf25ca1a9d7c4b1e
   digest: "sha256:ee8b6fd668e81745cf33ac4208bfc6dc457a69dd89f62728d7406403994cec4f"
   pullPolicy: IfNotPresent
 service:
@@ -72,7 +72,6 @@ postgres:
         memory: 64Mi
   migrateImage:
     repository: 528081867341.dkr.ecr.eu-central-1.amazonaws.com/shorturl-migrate
-    tag: 1426ccd6b9731b203881caabdf25ca1a9d7c4b1e
     digest: "sha256:8ba65a28ff0ee330cc12b2353a8125020377d21e8c251e631319d43241e4261b"
     pullPolicy: IfNotPresent
 secretsManagement:
@@ -121,4 +120,3 @@ probes:
     path: /healthz
   readiness:
     path: /readyz
-imageVersion: 7d67a29fd78a05f7e111f71cd7763461fd244d45

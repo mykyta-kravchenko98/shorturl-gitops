@@ -5,6 +5,7 @@ shorturl
 {{- define "shorturl.labels" -}}
 app.kubernetes.io/name: shorturl
 app.kubernetes.io/instance: {{ .Release.Name }}
+app.kubernetes.io/version: {{ required "imageVersion is required" .Values.imageVersion | quote }}
 {{- end -}}
 
 {{- define "shorturl.selectorLabels" -}}
@@ -12,10 +13,10 @@ app.kubernetes.io/name: shorturl
 {{- end -}}
 
 {{- define "shorturl.imageRef" -}}
-{{- if .digest -}}
-{{ .repository }}@{{ .digest }}
+{{- if .image.digest -}}
+{{ .image.repository }}@{{ .image.digest }}
 {{- else -}}
-{{ .repository }}:{{ .tag }}
+{{ .image.repository }}:{{ required "imageVersion is required when an image digest is empty" .version }}
 {{- end -}}
 {{- end -}}
 

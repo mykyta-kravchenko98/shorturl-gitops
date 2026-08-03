@@ -19,6 +19,7 @@ spec:
       labels:
         app.kubernetes.io/name: shorturl
         app.kubernetes.io/component: postgres-migrate
+        app.kubernetes.io/version: {{ .Values.imageVersion | quote }}
     spec:
       restartPolicy: Never
       {{- if .Values.imagePullSecret.enabled }}
@@ -69,7 +70,7 @@ spec:
                 - ALL
           resources:
             {{- toYaml .Values.postgres.migrations.resources | nindent 12 }}
-          image: "{{ include "shorturl.imageRef" .Values.postgres.migrateImage }}"
+          image: "{{ include "shorturl.imageRef" (dict "image" .Values.postgres.migrateImage "version" .Values.imageVersion) }}"
           imagePullPolicy: {{ .Values.postgres.migrateImage.pullPolicy }}
           env:
             - name: POSTGRES_HOST
