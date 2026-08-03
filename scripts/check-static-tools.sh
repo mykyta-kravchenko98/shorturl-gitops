@@ -4,7 +4,8 @@
 set -uo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-# shellcheck disable=SC1090 -- runtime path is anchored to this script.
+# The runtime path is anchored to this script.
+# shellcheck disable=SC1090
 source "${repo_root}/tools/static-versions.env"
 
 errors=0
