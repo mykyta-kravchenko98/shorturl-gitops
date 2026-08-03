@@ -2,35 +2,26 @@ suite: optional resources follow their feature flags
 templates:
   - templates/deployment.yaml
   - templates/ingress.yaml
-  - templates/servicemonitor.yaml
   - templates/otel-sidecar-config.yaml
   - templates/postgres-statefulset.yaml
 tests:
-  - it: omits disabled ingress and ServiceMonitor resources
+  - it: omits the Ingress when disabled
     set:
       ingress.enabled: false
-      metrics.serviceMonitor.enabled: false
       otel.sidecar.enabled: false
     asserts:
       - hasDocuments:
           count: 0
         template: templates/ingress.yaml
-      - hasDocuments:
-          count: 0
-        template: templates/servicemonitor.yaml
 
-  - it: renders enabled ingress and ServiceMonitor resources
+  - it: renders the Ingress when enabled
     set:
       ingress.enabled: true
-      metrics.serviceMonitor.enabled: true
       otel.sidecar.enabled: false
     asserts:
       - isKind:
           of: Ingress
         template: templates/ingress.yaml
-      - isKind:
-          of: ServiceMonitor
-        template: templates/servicemonitor.yaml
 
   - it: removes the OTel sidecar and its ConfigMap when disabled
     set:

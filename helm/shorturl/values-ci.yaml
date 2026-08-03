@@ -77,7 +77,3 @@ otel:
 
 ingress:
   enabled: false
-
-metrics:
-  serviceMonitor:
-    enabled: false
