@@ -25,9 +25,9 @@ spec:
         app.kubernetes.io/component: app
         app.kubernetes.io/version: {{ .Values.imageVersion | quote }}
       annotations:
-        checksum/config: {{ include "shorturl.configmap" . | sha256sum }}
+        checksum/config: {{ include "shorturl.configData" . | sha256sum }}
         {{- if .Values.otel.sidecar.enabled }}
-        checksum/otel-sidecar-config: {{ include "shorturl.otelSidecarConfig" . | sha256sum }}
+        checksum/otel-sidecar-config: {{ include "shorturl.otelSidecarConfigData" . | sha256sum }}
         {{- end }}
     spec:
       {{- if .Values.imagePullSecret.enabled }}

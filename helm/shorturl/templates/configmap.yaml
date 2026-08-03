@@ -1,1 +1,9 @@
-{{ include "shorturl.configmap" . }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "shorturl.fullname" . }}-config
+  labels:
+    {{- include "shorturl.labels" . | nindent 4 }}
+data:
+  config.yml: |
+    {{- include "shorturl.configData" . | nindent 4 }}

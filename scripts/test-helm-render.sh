@@ -22,19 +22,14 @@ trap cleanup EXIT
 
 render_shorturl() {
   local case_name="$1"
-  local values_file="${2:-}"
+  shift
   local output_file="${render_dir}/shorturl-${case_name}.yaml"
-  local -a values_args=()
-
-  if [[ -n "${values_file}" ]]; then
-    values_args=(--values "${values_file}")
-  fi
 
   printf 'Rendering Helm case: %s\n' "${case_name}"
   helm template shorturl "${shorturl_chart}" \
     --namespace shorturl \
     --kube-version "${KUBERNETES_VERSION}" \
-    "${values_args[@]}" >"${output_file}"
+    "$@" >"${output_file}"
 
   if [[ ! -s "${output_file}" ]]; then
     printf 'Helm case rendered an empty manifest: %s\n' "${case_name}" >&2
@@ -43,14 +38,32 @@ render_shorturl() {
 }
 
 render_shorturl default
-render_shorturl local "${shorturl_chart}/values-local.yaml"
-render_shorturl ci "${shorturl_chart}/values-ci.yaml"
-render_shorturl ecr-disabled "${fixture_dir}/ecr-disabled.yaml"
-render_shorturl external-postgres "${fixture_dir}/external-postgres.yaml"
-render_shorturl otel-disabled "${fixture_dir}/otel-disabled.yaml"
-render_shorturl hpa-enabled "${fixture_dir}/hpa-enabled.yaml"
-render_shorturl ingress-enabled "${fixture_dir}/ingress-enabled.yaml"
-render_shorturl servicemonitor-enabled "${fixture_dir}/servicemonitor-enabled.yaml"
+render_shorturl local --values "${shorturl_chart}/values-local.yaml"
+render_shorturl ci --values "${shorturl_chart}/values-ci.yaml"
+render_shorturl ecr-disabled --values "${fixture_dir}/ecr-disabled.yaml"
+render_shorturl external-postgres --values "${fixture_dir}/external-postgres.yaml"
+render_shorturl otel-disabled --values "${fixture_dir}/otel-disabled.yaml"
+render_shorturl hpa-enabled --values "${fixture_dir}/hpa-enabled.yaml"
+render_shorturl ingress-enabled --values "${fixture_dir}/ingress-enabled.yaml"
+render_shorturl servicemonitor-enabled --values "${fixture_dir}/servicemonitor-enabled.yaml"
+
+# This is a cross-render contract: helm-unittest validates the annotation shape,
+# while this comparison proves that changing ConfigMap input rolls the pod spec.
+render_shorturl config-changed --set-string server.restPort=8586
+default_checksum="$(awk '$1 == "checksum/config:" { print $2; exit }' \
+  "${render_dir}/shorturl-default.yaml")"
+changed_checksum="$(awk '$1 == "checksum/config:" { print $2; exit }' \
+  "${render_dir}/shorturl-config-changed.yaml")"
+
+if [[ -z "${default_checksum}" || -z "${changed_checksum}" ]]; then
+  printf 'ConfigMap checksum annotation is missing\n' >&2
+  exit 1
+fi
+
+if [[ "${default_checksum}" == "${changed_checksum}" ]]; then
+  printf 'ConfigMap checksum did not change with its input\n' >&2
+  exit 1
+fi
 
 printf 'Rendering Helm chart: app-of-apps\n'
 helm template root "${app_of_apps_chart}" \

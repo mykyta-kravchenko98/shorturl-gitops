@@ -1,3 +1,11 @@
 {{- if .Values.otel.sidecar.enabled }}
-{{ include "shorturl.otelSidecarConfig" . }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-sidecar-config
+  labels:
+    {{- include "shorturl.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    {{- include "shorturl.otelSidecarConfigData" . | nindent 4 }}
 {{- end }}

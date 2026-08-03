@@ -20,64 +20,48 @@ app.kubernetes.io/name: shorturl
 {{- end -}}
 {{- end -}}
 
-{{/* Application configuration, shared by the ConfigMap and pod checksum. */}}
-{{- define "shorturl.configmap" -}}
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: {{ include "shorturl.fullname" . }}-config
-  labels:
-    {{- include "shorturl.labels" . | nindent 4 }}
-data:
-  config.yml: |
-    postgresDB:
-      host: {{ .Values.postgres.host }}
-      dbName: {{ .Values.postgres.dbName }}
-      port: "{{ .Values.postgres.port }}"
-      sslmode: {{ .Values.postgres.sslMode }}
-    server:
-      restPort: "{{ .Values.server.restPort }}"
-      dataCenterId: {{ .Values.server.dataCenterId }}
-      mashineId: {{ .Values.server.machineId }}
+{{/* Application config data, shared by the ConfigMap and pod checksum. */}}
+{{- define "shorturl.configData" -}}
+postgresDB:
+  host: {{ .Values.postgres.host }}
+  dbName: {{ .Values.postgres.dbName }}
+  port: "{{ .Values.postgres.port }}"
+  sslmode: {{ .Values.postgres.sslMode }}
+server:
+  restPort: "{{ .Values.server.restPort }}"
+  dataCenterId: {{ .Values.server.dataCenterId }}
+  mashineId: {{ .Values.server.machineId }}
 {{- end -}}
 
-{{/* OTel sidecar configuration, shared by the ConfigMap and pod checksum. */}}
-{{- define "shorturl.otelSidecarConfig" -}}
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: otel-sidecar-config
-  labels:
-    {{- include "shorturl.labels" . | nindent 4 }}
-data:
-  config.yaml: |
-    receivers:
-      otlp:
-        protocols:
-          grpc:
-            endpoint: 0.0.0.0:4317
-          http:
-            endpoint: 0.0.0.0:4318
+{{/* OTel config data, shared by the ConfigMap and pod checksum. */}}
+{{- define "shorturl.otelSidecarConfigData" -}}
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
 
-    processors:
-      batch: {}
+processors:
+  batch: {}
 
-    exporters:
-      otlp/gateway:
-        endpoint: {{ .Values.otel.gatewayEndpoint }}
-        tls:
-          insecure: true
+exporters:
+  otlp/gateway:
+    endpoint: {{ .Values.otel.gatewayEndpoint }}
+    tls:
+      insecure: true
 
-    service:
-      pipelines:
-        traces:
-          receivers: [otlp]
-          processors: [batch]
-          exporters: [otlp/gateway]
-        metrics:
-          receivers: [otlp]
-          processors: [batch]
-          exporters: [otlp/gateway]
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp/gateway]
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp/gateway]
 {{- end -}}
 
 {{/*
