@@ -1,0 +1,3 @@
+# Render the chart without the ECR token refresh bootstrap and CronJob.
+ecrRefresh:
+  enabled: false

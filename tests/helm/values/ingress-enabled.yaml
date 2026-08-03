@@ -1,0 +1,4 @@
+# Exercise the optional Ingress resource with a non-production test hostname.
+ingress:
+  enabled: true
+  host: shorturl.test.invalid

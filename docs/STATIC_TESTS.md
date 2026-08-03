@@ -24,6 +24,12 @@ make test-helm
 make lint
 ```
 
+`make test-helm` runs strict linting and renders the ShortURL chart with the
+default and local profiles plus focused overlays for disabled ECR refresh,
+external PostgreSQL, disabled OpenTelemetry, HPA, Ingress, and ServiceMonitor.
+It also renders the app-of-apps chart. All output is written to a temporary
+directory and removed before the command exits; no cluster connection is used.
+
 `make test-static` is the aggregate entry point used locally and in CI. During
 the incremental implementation of the full gate it includes only completed
 checks; unfinished groups are never represented by empty targets that could

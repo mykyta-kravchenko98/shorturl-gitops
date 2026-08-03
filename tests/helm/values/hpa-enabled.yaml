@@ -1,0 +1,4 @@
+# Exercise the HPA branch; helm-unittest will separately assert that the
+# Deployment omits spec.replicas in this mode.
+autoscaling:
+  enabled: true
