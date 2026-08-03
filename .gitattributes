@@ -3,3 +3,4 @@
 # ("env: 'bash\r': No such file or directory"), which bites anyone running
 # this repo from a Windows checkout inside WSL2 (the common case here).
 *.sh text eol=lf
+*.env text eol=lf

@@ -9,3 +9,5 @@ controller/hack/certs/
 /.idea/modules.xml
 /.idea/shorturl-gitops.iml
 /.idea/vcs.xml
+
+terraform/envs/local/shorturl-config
