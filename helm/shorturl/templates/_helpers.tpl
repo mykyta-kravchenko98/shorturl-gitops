@@ -20,6 +20,50 @@ app.kubernetes.io/name: shorturl
 {{- end -}}
 {{- end -}}
 
+{{/* Application config data, shared by the ConfigMap and pod checksum. */}}
+{{- define "shorturl.configData" -}}
+postgresDB:
+  host: {{ .Values.postgres.host }}
+  dbName: {{ .Values.postgres.dbName }}
+  port: "{{ .Values.postgres.port }}"
+  sslmode: {{ .Values.postgres.sslMode }}
+server:
+  restPort: "{{ .Values.server.restPort }}"
+  dataCenterId: {{ .Values.server.dataCenterId }}
+  mashineId: {{ .Values.server.machineId }}
+{{- end -}}
+
+{{/* OTel config data, shared by the ConfigMap and pod checksum. */}}
+{{- define "shorturl.otelSidecarConfigData" -}}
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch: {}
+
+exporters:
+  otlp/gateway:
+    endpoint: {{ .Values.otel.gatewayEndpoint }}
+    tls:
+      insecure: true
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp/gateway]
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp/gateway]
+{{- end -}}
+
 {{/*
 Shared pod spec for both the one-shot seed Job and the recurring CronJob
 that refresh the ECR docker-registry pull secret. Takes .Values.ecrRefresh as

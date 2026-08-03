@@ -6,12 +6,4 @@ metadata:
     {{- include "shorturl.labels" . | nindent 4 }}
 data:
   config.yml: |
-    postgresDB:
-      host: {{ .Values.postgres.host }}
-      dbName: {{ .Values.postgres.dbName }}
-      port: "{{ .Values.postgres.port }}"
-      sslmode: {{ .Values.postgres.sslMode }}
-    server:
-      restPort: "{{ .Values.server.restPort }}"
-      dataCenterId: {{ .Values.server.dataCenterId }}
-      mashineId: {{ .Values.server.machineId }}
+    {{- include "shorturl.configData" . | nindent 4 }}
