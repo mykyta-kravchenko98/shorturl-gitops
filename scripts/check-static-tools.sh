@@ -106,7 +106,7 @@ check_helm_unittest() {
   fi
 
   local output
-  if ! output=$(helm unittest --version 2>&1); then
+  if ! output=$(helm plugin list | awk '$1 == "unittest" {print $2}'); then
     printf 'MISSING  %-16s expected %s (Helm plugin: unittest)\n' \
       "helm-unittest" "${HELM_UNITTEST_VERSION}"
     errors=$((errors + 1))
