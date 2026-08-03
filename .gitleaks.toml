@@ -1,0 +1,14 @@
+title = "shorturl-gitops gitleaks configuration"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "generic-api-key"
+
+  [[rules.allowlists]]
+  description = "Pinned External Secrets CRD SHA-256 is public integrity metadata"
+  condition = "AND"
+  regexTarget = "line"
+  paths = ['''scripts/update-kubeconform-schemas\.sh$''']
+  regexes = ['''external_secrets_crd_sha256="[0-9a-f]{64}"''']

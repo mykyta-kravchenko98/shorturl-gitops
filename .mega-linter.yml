@@ -13,7 +13,7 @@ ENABLE_LINTERS:
   - YAML_YAMLLINT
   - DOCKERFILE_HADOLINT      # controller/Dockerfile, if/when that repo exists here
   - BASH_SHELLCHECK          # scripts/*.sh, controller/hack/*.sh
-  - REPOSITORY_GITLEAKS      # secret scanning across the whole diff
+  - REPOSITORY_GITLEAKS      # secret scanning across the complete Git history
   - MARKDOWN_MARKDOWNLINT
 
 SHOW_ELAPSED_TIME: true

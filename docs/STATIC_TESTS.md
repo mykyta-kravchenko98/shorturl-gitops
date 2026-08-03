@@ -22,6 +22,7 @@ while working on it. `make lint` remains a backwards-compatible alias:
 ```bash
 make test-helm
 make test-kustomize
+make test-kubeconform
 make lint
 ```
 
@@ -37,6 +38,18 @@ directory and removed before the command exits; no cluster connection is used.
 requires it to contain a kustomization file, and runs `kubectl kustomize`.
 Every build must produce a non-empty manifest. Rendered output is temporary,
 and the command does not contact a Kubernetes cluster.
+
+`make test-kubeconform` renders all supported Helm profiles and Kustomize
+directories, then validates them together with the bootstrap and namespace
+manifests. Kubernetes resources use the standard `1.31.14` schemas. Argo CD,
+External Secrets Operator, CredentialRotation, and TrafficScenario use the
+vendored schemas under `schemas/kubeconform/`. Strict mode is mandatory, and a
+negative probe confirms that an unknown schema fails instead of being skipped.
+
+Custom schemas are regenerated explicitly with
+`make update-kubeconform-schemas`. This maintenance command is separate from
+the read-only static gate because it uses the network and updates vendored
+files.
 
 `make test-static` is the aggregate entry point used locally and in CI. During
 the incremental implementation of the full gate it includes only completed
