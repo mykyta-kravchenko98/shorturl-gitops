@@ -21,6 +21,7 @@ while working on it. `make lint` remains a backwards-compatible alias:
 
 ```bash
 make test-helm
+make test-kustomize
 make lint
 ```
 
@@ -31,6 +32,11 @@ Ingress, and ServiceMonitor. The render gate also verifies that a ConfigMap
 input change produces a different Deployment checksum.
 It also renders the app-of-apps chart. All output is written to a temporary
 directory and removed before the command exits; no cluster connection is used.
+
+`make test-kustomize` discovers every immediate directory under `k8s/`,
+requires it to contain a kustomization file, and runs `kubectl kustomize`.
+Every build must produce a non-empty manifest. Rendered output is temporary,
+and the command does not contact a Kubernetes cluster.
 
 `make test-static` is the aggregate entry point used locally and in CI. During
 the incremental implementation of the full gate it includes only completed

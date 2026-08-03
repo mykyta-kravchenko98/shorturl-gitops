@@ -1,4 +1,4 @@
-.PHONY: up down argocd-ui lint check-static-tools test-static test-helm
+.PHONY: up down argocd-ui lint check-static-tools test-static test-helm test-kustomize
 
 up:
 	./scripts/up.sh
@@ -14,13 +14,16 @@ check-static-tools:
 
 # Aggregate only implemented checks. New static groups are added here as
 # their real recipes land; no placeholder target may pass silently.
-test-static: check-static-tools test-helm
+test-static: check-static-tools test-helm test-kustomize
 
 test-helm:
 	helm lint --strict helm/shorturl
 	helm lint --strict helm/app-of-apps
 	helm unittest helm/shorturl
 	bash ./scripts/test-helm-render.sh
+
+test-kustomize:
+	bash ./scripts/test-kustomize.sh
 
 # Backwards-compatible local command documented since the first CI stage.
 lint: test-helm
