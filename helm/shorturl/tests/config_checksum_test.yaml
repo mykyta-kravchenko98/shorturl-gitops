@@ -11,10 +11,10 @@ tests:
     asserts:
       - equal:
           path: spec.template.metadata.annotations["checksum/config"]
-          value: 9f663350e2fb31d9bf52de22387b36328ba9911f3d10687766e53103d110d6e4
+          value: 5dc22cb901d6e538314a987fc95adb91876cb285ebc03a3724edededec76af3c
       - notEqual:
           path: spec.template.metadata.annotations["checksum/config"]
-          value: 5dd302f48cb9ac9af21e8ca20f6775b38df505b1737439de375f40bc21e89322
+          value: 1b7f377af671058618077ff52ac3c6d76b049fd3a98e91c7ff619fb96279e96c
 
   - it: records a different checksum after ConfigMap input changes
     set:
@@ -23,7 +23,7 @@ tests:
     asserts:
       - equal:
           path: spec.template.metadata.annotations["checksum/config"]
-          value: 5dd302f48cb9ac9af21e8ca20f6775b38df505b1737439de375f40bc21e89322
+          value: 1b7f377af671058618077ff52ac3c6d76b049fd3a98e91c7ff619fb96279e96c
       - notEqual:
           path: spec.template.metadata.annotations["checksum/config"]
-          value: 9f663350e2fb31d9bf52de22387b36328ba9911f3d10687766e53103d110d6e4
+          value: 5dc22cb901d6e538314a987fc95adb91876cb285ebc03a3724edededec76af3c
