@@ -1,0 +1,26 @@
+suite: Service and Deployment selector contract
+templates:
+  - templates/deployment.yaml
+  - templates/service.yaml
+tests:
+  - it: makes the Service select exactly the application pods
+    set:
+      otel.sidecar.enabled: false
+    asserts:
+      - equal:
+          path: spec.selector
+          value:
+            app.kubernetes.io/name: shorturl
+            app.kubernetes.io/component: app
+        template: templates/service.yaml
+      - isSubset:
+          path: spec.template.metadata.labels
+          content:
+            app.kubernetes.io/name: shorturl
+            app.kubernetes.io/component: app
+        template: templates/deployment.yaml
+      - equal:
+          path: spec.selector.matchLabels
+          value:
+            app.kubernetes.io/name: shorturl
+        template: templates/deployment.yaml

@@ -24,9 +24,10 @@ make test-helm
 make lint
 ```
 
-`make test-helm` runs strict linting and renders the ShortURL chart with the
-default, local, and CI profiles plus focused overlays for disabled ECR refresh,
-external PostgreSQL, disabled OpenTelemetry, HPA, Ingress, and ServiceMonitor.
+`make test-helm` runs strict linting, Helm unit tests, and renders the ShortURL
+chart with the default, local, and CI profiles plus focused overlays for
+disabled ECR refresh, external PostgreSQL, disabled OpenTelemetry, HPA,
+Ingress, and ServiceMonitor.
 It also renders the app-of-apps chart. All output is written to a temporary
 directory and removed before the command exits; no cluster connection is used.
 

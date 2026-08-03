@@ -1,0 +1,55 @@
+suite: application and migration image contract
+templates:
+  - templates/deployment.yaml
+  - templates/postgres-migrate-job.yaml
+release:
+  name: shorturl-test
+tests:
+  - it: prefers an application digest over the shared image version
+    set:
+      imageVersion: ignored-version
+      image.repository: registry.example/shorturl
+      image.digest: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+      otel.sidecar.enabled: false
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: registry.example/shorturl@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        template: templates/deployment.yaml
+
+  - it: uses one shared version when both image digests are empty
+    set:
+      imageVersion: commit-abc123
+      image.repository: registry.example/shorturl
+      image.digest: ""
+      postgres.migrateImage.repository: registry.example/shorturl-migrate
+      postgres.migrateImage.digest: ""
+      otel.sidecar.enabled: false
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: registry.example/shorturl:commit-abc123
+        template: templates/deployment.yaml
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: registry.example/shorturl-migrate:commit-abc123
+        template: templates/postgres-migrate-job.yaml
+      - equal:
+          path: spec.template.metadata.labels["app.kubernetes.io/version"]
+          value: commit-abc123
+        template: templates/deployment.yaml
+      - equal:
+          path: spec.template.metadata.labels["app.kubernetes.io/version"]
+          value: commit-abc123
+        template: templates/postgres-migrate-job.yaml
+
+  - it: prefers a migration digest over the shared image version
+    set:
+      imageVersion: ignored-version
+      postgres.migrateImage.repository: registry.example/shorturl-migrate
+      postgres.migrateImage.digest: sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: registry.example/shorturl-migrate@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+        template: templates/postgres-migrate-job.yaml
