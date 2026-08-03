@@ -4,22 +4,26 @@ The complete static gate is intended to run through `make test-static` both
 inside WSL2 and in CI. The gate does not deploy the application, contact a
 Kubernetes cluster, or run Terraform `plan`, `apply`, or `destroy`.
 
-Tool versions are pinned in `tools/static-versions.env`. The Makefile and test
-scripts never install or upgrade tools: CI prepares them explicitly, and a
-developer installs them once in WSL2. Check the local environment with:
+CI tool versions and supported local ranges are defined in
+`tools/static-versions.env`. The Makefile and test scripts never install or
+upgrade tools: CI prepares them explicitly, and a developer installs them once
+in WSL2. Check the local environment with:
 
 ```bash
 make check-static-tools
 ```
 
-The command reports every missing or mismatched tool in one run. It is normal
-for it to fail before the static toolchain has been installed.
+The command reports every missing, incompatible, or mismatched tool in one
+run. It is normal for it to fail before the static toolchain has been installed.
 
 ## Install in WSL2
 
-Use the exact versions from `tools/static-versions.env`, not an unversioned
-`latest` download. Release archives and installation instructions are
-published by the respective upstream projects:
+CI uses the exact `*_VERSION` values from `tools/static-versions.env`. Locally,
+Helm, kubectl and Terraform may use any version inside their documented
+`*_LOCAL_MIN_VERSION` (inclusive) to `*_LOCAL_MAX_VERSION` (exclusive) range.
+Static analyzers must match their exact pinned versions because their findings
+can change between releases. Release archives and installation instructions
+are published by the respective upstream projects:
 
 | Tool | Installation source |
 |---|---|
@@ -63,12 +67,14 @@ helm plugin install \
 For the remaining standalone binaries, download the Linux archive for the
 machine architecture from the linked release, verify the published checksum,
 and place the executable in a directory on `PATH` such as `~/.local/bin`.
-Package-manager versions must not be used when they differ from the pinned
-version.
+Package-manager versions are acceptable for Helm, kubectl and Terraform when
+they are inside the compatible range. Analyzer versions must match exactly.
 
-The repository deliberately pins Helm 3 rather than moving to Helm 4 during
-the static-gate work. kubectl is pinned to the same Kubernetes minor version
-as the kind node image used by the Terraform module.
+The repository deliberately accepts Helm 3 rather than moving to Helm 4 during
+the static-gate work. kubectl 1.30, 1.31 and 1.32 are accepted for the kind
+Kubernetes 1.31 cluster, following the supported one-minor client skew. CI uses
+kubectl 1.31. Terraform accepts the current major beginning at the repository's
+minimum `required_version`, while CI stays pinned to one reproducible version.
 
 ## Updating the toolchain
 
