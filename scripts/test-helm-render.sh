@@ -45,7 +45,6 @@ render_shorturl external-postgres --values "${fixture_dir}/external-postgres.yam
 render_shorturl otel-disabled --values "${fixture_dir}/otel-disabled.yaml"
 render_shorturl hpa-enabled --values "${fixture_dir}/hpa-enabled.yaml"
 render_shorturl ingress-enabled --values "${fixture_dir}/ingress-enabled.yaml"
-render_shorturl servicemonitor-enabled --values "${fixture_dir}/servicemonitor-enabled.yaml"
 
 # This is a cross-render contract: helm-unittest validates the annotation shape,
 # while this comparison proves that changing ConfigMap input rolls the pod spec.

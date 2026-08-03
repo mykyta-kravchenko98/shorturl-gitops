@@ -112,9 +112,6 @@ server:
 ingress:
   enabled: false
   host: shorturl.local
-metrics:
-  serviceMonitor:
-    enabled: false
 probes:
   liveness:
     path: /healthz

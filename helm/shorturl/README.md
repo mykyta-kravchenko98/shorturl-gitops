@@ -16,7 +16,6 @@ database, credential, registry, and observability integrations.
 | `imagePullSecret.enabled` | Attach an existing pull Secret to workload Pods |
 | `ecrRefresh.enabled` | ECR refresh RBAC, seed Job, and CronJob |
 | `otel.sidecar.enabled` | OpenTelemetry sidecar and its ConfigMap |
-| `metrics.serviceMonitor.enabled` | Prometheus ServiceMonitor |
 
 The default values preserve the local AWS-backed deployment. A minimal
 environment can deploy PostgreSQL while using a pre-created Kubernetes Secret
