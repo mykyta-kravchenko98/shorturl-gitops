@@ -57,9 +57,22 @@ Separating
 `imagePullSecret.enabled` from `ecrRefresh.enabled` also allows a platform to
 provide a pull Secret without granting the chart permission to refresh it.
 
-The `values-ci.yaml` profile uses images named `shorturl-ci:test` and
-`shorturl-migrate-ci:test` with pull policy `Never`. The CI workflow must build
-and load both images into kind instead of pulling them from a registry.
+The `values-ci.yaml` profile sets the shared `imageVersion` to `test`, producing
+images named `shorturl-ci:test` and `shorturl-migrate-ci:test` with pull policy
+`Never`. The CI workflow must build and load both images into kind instead of
+pulling them from a registry.
+
+## Application image version
+
+The application and migration images are built from the same ShortUrl commit.
+Set that commit once in `imageVersion`; both images use it as their fallback
+tag. The repositories and immutable digests remain independent because the two
+images contain different binaries and therefore cannot share a digest.
+
+When a digest is present, `shorturl.imageRef` renders
+`repository@sha256:...`. When it is empty, as in the disposable CI profile, it
+renders `repository:imageVersion`. There are deliberately no separate
+`image.tag` and `postgres.migrateImage.tag` values that could drift apart.
 
 ## Runtime pins
 

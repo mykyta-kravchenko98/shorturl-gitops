@@ -1,7 +1,10 @@
 replicaCount: 1
+# Both application images are built from this ShortUrl Git commit. Their
+# repositories and digests differ, but their human-readable fallback tag must
+# never drift because the migration binary embeds the matching SQL migrations.
+imageVersion: 1426ccd6b9731b203881caabdf25ca1a9d7c4b1e
 image:
   repository: 528081867341.dkr.ecr.eu-central-1.amazonaws.com/shorturl
-  tag: 1426ccd6b9731b203881caabdf25ca1a9d7c4b1e
   digest: "sha256:c014c8301a16c8a25cc1673d8478fe4be4d71a1dba4c476927b27ab4440c169f"
   pullPolicy: IfNotPresent
 service:
@@ -72,7 +75,6 @@ postgres:
         memory: 64Mi
   migrateImage:
     repository: 528081867341.dkr.ecr.eu-central-1.amazonaws.com/shorturl-migrate
-    tag: 1426ccd6b9731b203881caabdf25ca1a9d7c4b1e
     digest: "sha256:88fbd128a4dbe3f8d97686e2aefb9221be95618bde1c048eb6eaa5a7dc5dde1a"
     pullPolicy: IfNotPresent
 secretsManagement:

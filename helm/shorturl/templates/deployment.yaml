@@ -23,6 +23,7 @@ spec:
       labels:
         {{- include "shorturl.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: app
+        app.kubernetes.io/version: {{ .Values.imageVersion | quote }}
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
         {{- if .Values.otel.sidecar.enabled }}
@@ -45,7 +46,7 @@ spec:
             capabilities:
               drop:
                 - ALL
-          image: "{{ include "shorturl.imageRef" .Values.image }}"
+          image: "{{ include "shorturl.imageRef" (dict "image" .Values.image "version" .Values.imageVersion) }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http

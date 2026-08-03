@@ -2,10 +2,10 @@
 # The application and migration images are built by the workflow and loaded
 # directly into kind, so this profile never authenticates to AWS/ECR.
 replicaCount: 1
+imageVersion: test
 
 image:
   repository: shorturl-ci
-  tag: test
   digest: ""
   pullPolicy: Never
 
@@ -54,7 +54,6 @@ postgres:
         memory: 64Mi
   migrateImage:
     repository: shorturl-migrate-ci
-    tag: test
     digest: ""
     pullPolicy: Never
 

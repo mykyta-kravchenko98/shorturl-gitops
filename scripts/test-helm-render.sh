@@ -44,6 +44,7 @@ render_shorturl() {
 
 render_shorturl default
 render_shorturl local "${shorturl_chart}/values-local.yaml"
+render_shorturl ci "${shorturl_chart}/values-ci.yaml"
 render_shorturl ecr-disabled "${fixture_dir}/ecr-disabled.yaml"
 render_shorturl external-postgres "${fixture_dir}/external-postgres.yaml"
 render_shorturl otel-disabled "${fixture_dir}/otel-disabled.yaml"
