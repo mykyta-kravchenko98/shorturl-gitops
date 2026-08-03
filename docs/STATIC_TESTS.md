@@ -1,0 +1,83 @@
+# Static test toolchain
+
+The complete static gate is intended to run through `make test-static` both
+inside WSL2 and in CI. The gate does not deploy the application, contact a
+Kubernetes cluster, or run Terraform `plan`, `apply`, or `destroy`.
+
+Tool versions are pinned in `tools/static-versions.env`. The Makefile and test
+scripts never install or upgrade tools: CI prepares them explicitly, and a
+developer installs them once in WSL2. Check the local environment with:
+
+```bash
+make check-static-tools
+```
+
+The command reports every missing or mismatched tool in one run. It is normal
+for it to fail before the static toolchain has been installed.
+
+## Install in WSL2
+
+Use the exact versions from `tools/static-versions.env`, not an unversioned
+`latest` download. Release archives and installation instructions are
+published by the respective upstream projects:
+
+| Tool | Installation source |
+|---|---|
+| Helm | <https://github.com/helm/helm/releases> |
+| helm-unittest | <https://github.com/helm-unittest/helm-unittest/releases> |
+| kubectl | <https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/> |
+| kubeconform | <https://github.com/yannh/kubeconform/releases> |
+| Terraform | <https://releases.hashicorp.com/terraform/> |
+| TFLint | <https://github.com/terraform-linters/tflint/releases> |
+| Checkov | <https://github.com/bridgecrewio/checkov/releases> |
+| Conftest | <https://github.com/open-policy-agent/conftest/releases> |
+| actionlint | <https://github.com/rhysd/actionlint/releases> |
+| zizmor | <https://github.com/zizmorcore/zizmor/releases> |
+| Gitleaks | <https://github.com/gitleaks/gitleaks/releases> |
+| jq | <https://github.com/jqlang/jq/releases> |
+| yamllint | <https://github.com/adrienverge/yamllint/releases> |
+| ShellCheck | <https://github.com/koalaman/shellcheck/releases> |
+| markdownlint-cli | <https://github.com/igorshubovych/markdownlint-cli/releases> |
+| Hadolint | <https://github.com/hadolint/hadolint/releases> |
+
+Python tools are most safely isolated with `pipx`, and the Node-based
+Markdown linter can be installed with npm:
+
+```bash
+source tools/static-versions.env
+
+pipx install "checkov==${CHECKOV_VERSION}"
+pipx install "yamllint==${YAMLLINT_VERSION}"
+npm install --global "markdownlint-cli@${MARKDOWNLINT_VERSION}"
+```
+
+Install the Helm plugin from its versioned release archive:
+
+```bash
+source tools/static-versions.env
+
+helm plugin install \
+  "https://github.com/helm-unittest/helm-unittest/releases/download/v${HELM_UNITTEST_VERSION}/unittest-${HELM_UNITTEST_VERSION}.tgz"
+```
+
+For the remaining standalone binaries, download the Linux archive for the
+machine architecture from the linked release, verify the published checksum,
+and place the executable in a directory on `PATH` such as `~/.local/bin`.
+Package-manager versions must not be used when they differ from the pinned
+version.
+
+The repository deliberately pins Helm 3 rather than moving to Helm 4 during
+the static-gate work. kubectl is pinned to the same Kubernetes minor version
+as the kind node image used by the Terraform module.
+
+## Updating the toolchain
+
+Update one tool at a time:
+
+1. Change its value in `tools/static-versions.env`.
+2. Update the explicit CI installation source or checksum.
+3. Run `make check-static-tools` and then the complete `make test-static`.
+4. Commit the version change together with any required configuration fixes.
+
+Do not silently fall back to whatever version happens to be available on a
+developer machine or a GitHub-hosted runner.
