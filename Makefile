@@ -1,4 +1,4 @@
-.PHONY: up down argocd-ui lint
+.PHONY: up down argocd-ui lint check-static-tools
 
 up:
 	./scripts/up.sh
@@ -12,3 +12,6 @@ argocd-ui:
 lint:
 	helm lint helm/shorturl
 	helm lint helm/app-of-apps
+
+check-static-tools:
+	bash ./scripts/check-static-tools.sh

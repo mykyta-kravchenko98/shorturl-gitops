@@ -19,6 +19,18 @@ env bash`, etc.) - this repo assumes WSL2 throughout.
 | make | runs `Makefile` targets | `make --version` |
 | Go 1.24+ | only needed if touching a controller repo locally | `go version` |
 
+The deployment prerequisites above are intentionally smaller than the static
+analysis toolchain. Before running the repository-wide static gate, install
+the pinned tools described in [STATIC_TESTS.md](STATIC_TESTS.md), then verify
+the environment with:
+
+```bash
+make check-static-tools
+```
+
+The check only reports missing or mismatched tools; it does not install or
+modify anything.
+
 Terraform (not in Ubuntu's default apt repos):
 ```bash
 sudo apt update && sudo apt install -y gnupg software-properties-common
