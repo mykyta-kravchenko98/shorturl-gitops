@@ -16,6 +16,19 @@ make check-static-tools
 The command reports every missing, incompatible, or mismatched tool in one
 run. It is normal for it to fail before the static toolchain has been installed.
 
+The Makefile exposes independent checks so a developer can run a focused group
+while working on it. `make lint` remains a backwards-compatible alias:
+
+```bash
+make test-helm
+make lint
+```
+
+`make test-static` is the aggregate entry point used locally and in CI. During
+the incremental implementation of the full gate it includes only completed
+checks; unfinished groups are never represented by empty targets that could
+pass silently.
+
 ## Install in WSL2
 
 CI uses the exact `*_VERSION` values from `tools/static-versions.env`. Locally,
