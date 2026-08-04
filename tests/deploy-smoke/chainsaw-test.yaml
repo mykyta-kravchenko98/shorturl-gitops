@@ -1,0 +1,222 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: basic-deploy-smoke
+spec:
+  namespace: default
+  steps:
+    - name: kind node and Argo CD become available
+      try:
+        - assert:
+            resource:
+              apiVersion: v1
+              kind: Node
+              metadata:
+                name: ($values.nodeName)
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: "True"
+        - assert:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: argocd-server
+                namespace: argocd
+              status:
+                (availableReplicas >= `1`): true
+                (conditions[?type == 'Available']):
+                  - status: "True"
+        - script:
+            shell: bash
+            shellArgs: [-c]
+            timeout: 1m
+            content: |
+              set -euo pipefail
+              log_file="$(mktemp)"
+              kubectl -n argocd port-forward service/argocd-server 18080:80 \
+                >"${log_file}" 2>&1 &
+              forward_pid=$!
+              cleanup() {
+                kill "${forward_pid}" >/dev/null 2>&1 || true
+                wait "${forward_pid}" >/dev/null 2>&1 || true
+                rm -f "${log_file}"
+              }
+              trap cleanup EXIT
+              for _ in $(seq 1 30); do
+                status="$(curl --silent --output /dev/null \
+                  --write-out '%{http_code}' http://127.0.0.1:18080/healthz || true)"
+                if [[ "${status}" == "200" ]]; then
+                  exit 0
+                fi
+                sleep 1
+              done
+              exit 1
+
+    - name: root creates healthy child Applications
+      try:
+        - assert:
+            resource:
+              apiVersion: argoproj.io/v1alpha1
+              kind: Application
+              metadata:
+                name: root
+                namespace: argocd
+              status:
+                sync:
+                  status: Synced
+                health:
+                  status: Healthy
+        - assert:
+            resource:
+              apiVersion: argoproj.io/v1alpha1
+              kind: Application
+              metadata:
+                name: namespaces
+                namespace: argocd
+              status:
+                sync:
+                  status: Synced
+                health:
+                  status: Healthy
+        - assert:
+            resource:
+              apiVersion: argoproj.io/v1alpha1
+              kind: Application
+              metadata:
+                name: shorturl
+                namespace: argocd
+              status:
+                sync:
+                  status: Synced
+                health:
+                  status: Healthy
+        - script:
+            shell: bash
+            shellArgs: [-c]
+            timeout: 1m
+            content: |
+              set -euo pipefail
+              actual="$(kubectl -n argocd get applications \
+                -o json | jq -r '[.items[].metadata.name] | sort | join(",")')"
+              test "${actual}" = "namespaces,root,shorturl"
+
+    - name: database migration and ShortUrl rollout complete
+      try:
+        - assert:
+            resource:
+              apiVersion: apps/v1
+              kind: StatefulSet
+              metadata:
+                name: postgres
+                namespace: shorturl
+              status:
+                readyReplicas: 1
+                (currentReplicas >= `1`): true
+        - assert:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: shorturl
+                namespace: shorturl
+              status:
+                (readyReplicas == replicas): true
+                (updatedReplicas == replicas): true
+                (availableReplicas == replicas): true
+                (conditions[?type == 'Available']):
+                  - status: "True"
+        - script:
+            shell: bash
+            shellArgs: [-c]
+            timeout: 1m
+            content: |
+              set -euo pipefail
+              kubectl -n shorturl exec statefulset/postgres -- \
+                pg_isready -U shorturl -d ShortURLDataDB >/dev/null
+        - script:
+            shell: bash
+            shellArgs: [-c]
+            timeout: 1m
+            content: |
+              set -euo pipefail
+              kubectl -n argocd get application shorturl -o json | jq -e '
+                [.status.operationState.syncResult.resources[]?
+                  | select(
+                      .kind == "Job" and
+                      .name == "postgres-migrate" and
+                      .hookPhase == "Succeeded"
+                    )] | length == 1
+              ' >/dev/null
+        - script:
+            shell: bash
+            shellArgs: [-c]
+            timeout: 1m
+            content: |
+              set -euo pipefail
+              kubectl get pods -A -o json | jq -e '
+                [
+                  .items[]
+                  | select(
+                      .status.phase == "Pending" or
+                      any(
+                        ((.status.initContainerStatuses // []) +
+                         (.status.containerStatuses // []))[]?;
+                        .state.waiting.reason == "CrashLoopBackOff" or
+                        .state.waiting.reason == "ImagePullBackOff"
+                      )
+                    )
+                ] | length == 0
+              ' >/dev/null
+
+    - name: ShortUrl HTTP scenario
+      try:
+        - script:
+            shell: bash
+            shellArgs: [-c]
+            timeout: 1m
+            content: |
+              set -euo pipefail
+              log_file="$(mktemp)"
+              kubectl -n shorturl port-forward service/shorturl 18585:8585 \
+                >"${log_file}" 2>&1 &
+              forward_pid=$!
+              cleanup() {
+                kill "${forward_pid}" >/dev/null 2>&1 || true
+                wait "${forward_pid}" >/dev/null 2>&1 || true
+                rm -f "${log_file}"
+              }
+              trap cleanup EXIT
+
+              for _ in $(seq 1 30); do
+                if curl --silent --fail http://127.0.0.1:18585/healthz \
+                  >/dev/null; then
+                  break
+                fi
+                sleep 1
+              done
+
+              test "$(curl --silent --output /dev/null --write-out '%{http_code}' \
+                http://127.0.0.1:18585/healthz)" = "200"
+              test "$(curl --silent --output /dev/null --write-out '%{http_code}' \
+                http://127.0.0.1:18585/readyz)" = "200"
+
+              target_url="https://example.com/deploy-smoke"
+              response="$(curl --silent --show-error --fail \
+                --request POST http://127.0.0.1:18585/api/v1/data/shorten \
+                --header 'Content-Type: application/json' \
+                --data "{\"longURL\":\"${target_url}\"}")"
+              hash="$(jq -er '.shortURL | strings | select(length > 0)' \
+                <<<"${response}")"
+
+              headers="$(mktemp)"
+              status="$(curl --silent --output /dev/null --dump-header "${headers}" \
+                --max-redirs 0 --write-out '%{http_code}' \
+                "http://127.0.0.1:18585/api/v1/${hash}")"
+              test "${status}" = "308"
+              tr -d '\r' <"${headers}" | \
+                grep -Fixq "location: ${target_url}"
+              rm -f "${headers}"
+
+              test "$(curl --silent --output /dev/null --write-out '%{http_code}' \
+                http://127.0.0.1:18585/api/v1/unknownSmokeHash)" = "404"

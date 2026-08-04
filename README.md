@@ -248,6 +248,13 @@ Pull requests targeting `main` run the complete `make test-static` gate with a
 pinned CI toolchain. MegaLinter remains as a separate style-analysis job for
 Terraform, Helm, Kubernetes YAML, shell scripts, Markdown, and secret scanning.
 
+Pull requests also run the disposable basic deploy smoke. It builds local test
+images, provisions kind and Argo CD through Terraform, waits for the app-of-apps
+deployment with Chainsaw, exercises the ShortUrl HTTP API, verifies a second
+Terraform apply is converged, and always tears the cluster down. See
+[docs/DEPLOY_SMOKE.md](docs/DEPLOY_SMOKE.md) for the assertion list and local
+command.
+
 ## Stopping and Destroying the Environment
 
 Shutting down the computer does not delete the cluster. After Docker Desktop
