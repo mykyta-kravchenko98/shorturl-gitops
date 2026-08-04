@@ -38,6 +38,7 @@ mise --yes use --global \
   "aqua:hadolint/hadolint@${HADOLINT_VERSION}"
 
 helm plugin install \
-  "https://github.com/helm-unittest/helm-unittest/releases/download/v${HELM_UNITTEST_VERSION}/unittest-${HELM_UNITTEST_VERSION}.tgz"
+  https://github.com/helm-unittest/helm-unittest.git \
+  --version "v${HELM_UNITTEST_VERSION}"
 
 printf 'Pinned CI static toolchain installed.\n'

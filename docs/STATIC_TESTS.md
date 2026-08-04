@@ -142,13 +142,14 @@ pipx install "yamllint==${YAMLLINT_VERSION}"
 npm install --global "markdownlint-cli@${MARKDOWNLINT_VERSION}"
 ```
 
-Install the Helm plugin from its versioned release archive:
+Install the Helm plugin from its pinned VCS tag:
 
 ```bash
 source tools/static-versions.env
 
 helm plugin install \
-  "https://github.com/helm-unittest/helm-unittest/releases/download/v${HELM_UNITTEST_VERSION}/unittest-${HELM_UNITTEST_VERSION}.tgz"
+  https://github.com/helm-unittest/helm-unittest.git \
+  --version "v${HELM_UNITTEST_VERSION}"
 ```
 
 For the remaining standalone binaries, download the Linux archive for the
