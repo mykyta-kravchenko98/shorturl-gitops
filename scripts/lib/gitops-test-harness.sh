@@ -126,18 +126,46 @@ gitops_set_root_source() {
   local revision="$2"
   local source_patch
 
-  source_patch="$(kubectl -n argocd get application root -o json | jq -c \
+  # The test operations make the app-of-apps parameter ordering an explicit
+  # contract. If the Terraform template changes, fail before replacing the
+  # wrong parameter instead of silently producing invalid child Applications.
+  source_patch="$(jq -cn \
     --arg repo_url "${repo_url}" \
     --arg revision "${revision}" '
-      .spec.source.repoURL = $repo_url
-      | .spec.source.targetRevision = $revision
-      | (.spec.source.helm.parameters[]
-          | select(.name == "git.repoURL").value) = $repo_url
-      | (.spec.source.helm.parameters[]
-          | select(.name == "git.targetRevision").value) = $revision
-      | {spec: {source: .spec.source}}
+      [
+        {
+          op: "replace",
+          path: "/spec/source/repoURL",
+          value: $repo_url
+        },
+        {
+          op: "replace",
+          path: "/spec/source/targetRevision",
+          value: $revision
+        },
+        {
+          op: "test",
+          path: "/spec/source/helm/parameters/0/name",
+          value: "git.repoURL"
+        },
+        {
+          op: "replace",
+          path: "/spec/source/helm/parameters/0/value",
+          value: $repo_url
+        },
+        {
+          op: "test",
+          path: "/spec/source/helm/parameters/1/name",
+          value: "git.targetRevision"
+        },
+        {
+          op: "replace",
+          path: "/spec/source/helm/parameters/1/value",
+          value: $revision
+        }
+      ]
     ')"
-  kubectl -n argocd patch application root --type merge \
+  kubectl -n argocd patch application root --type json \
     --patch "${source_patch}" >/dev/null
   gitops_refresh_application root
 }
