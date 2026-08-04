@@ -1,0 +1,98 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: gitops-recovery
+spec:
+  namespace: default
+  steps:
+    - name: working image revision restores healthy convergence
+      try:
+        - assert:
+            resource:
+              apiVersion: argoproj.io/v1alpha1
+              kind: Application
+              metadata:
+                name: shorturl
+                namespace: argocd
+              status:
+                sync:
+                  revision: ($values.revision)
+                  status: Synced
+                health:
+                  status: Healthy
+        - assert:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: shorturl
+                namespace: shorturl
+              status:
+                replicas: 2
+                readyReplicas: 2
+                updatedReplicas: 2
+                availableReplicas: 2
+        - script:
+            shell: bash
+            shellArgs: [-c]
+            timeout: 2m
+            env:
+              - name: WORKING_DIGEST
+                value: ($values.workingDigest)
+              - name: RETAINED_PODS
+                value: ($values.retainedPods)
+            content: |
+              set -euo pipefail
+              pod_selector='app.kubernetes.io/name=shorturl,app.kubernetes.io/component=app'
+              expected_image="shorturl-ci@${WORKING_DIGEST}"
+
+              for _ in $(seq 1 120); do
+                deployment_json="$(kubectl -n shorturl get deployment shorturl \
+                  -o json)"
+                pods_json="$(kubectl -n shorturl get pods \
+                  --selector "${pod_selector}" -o json)"
+                current_pods="$(jq -r '
+                  [.items[].metadata.uid] | sort | join(":")
+                ' <<<"${pods_json}")"
+                if jq -e --arg image "${expected_image}" '
+                    any(.spec.template.spec.containers[];
+                      .name == "shorturl" and .image == $image)
+                  ' <<<"${deployment_json}" >/dev/null && \
+                  jq -e '.items | length == 2' \
+                    <<<"${pods_json}" >/dev/null && \
+                  [[ "${current_pods}" == "${RETAINED_PODS}" ]]; then
+                  break
+                fi
+                sleep 1
+              done
+
+              deployment_json="$(kubectl -n shorturl get deployment shorturl \
+                -o json)"
+              pods_json="$(kubectl -n shorturl get pods \
+                --selector "${pod_selector}" -o json)"
+              jq -e --arg image "${expected_image}" '
+                any(.spec.template.spec.containers[];
+                  .name == "shorturl" and .image == $image)
+              ' <<<"${deployment_json}" >/dev/null
+              test "$(jq -r '
+                [.items[].metadata.uid] | sort | join(":")
+              ' <<<"${pods_json}")" = "${RETAINED_PODS}"
+
+              log_file="$(mktemp)"
+              kubectl -n shorturl port-forward service/shorturl 18585:8585 \
+                >"${log_file}" 2>&1 &
+              forward_pid=$!
+              cleanup() {
+                kill "${forward_pid}" >/dev/null 2>&1 || true
+                wait "${forward_pid}" >/dev/null 2>&1 || true
+                rm -f "${log_file}"
+              }
+              trap cleanup EXIT
+              for _ in $(seq 1 30); do
+                if curl --silent --fail http://127.0.0.1:18585/readyz \
+                  >/dev/null; then
+                  exit 0
+                fi
+                sleep 1
+              done
+              exit 1

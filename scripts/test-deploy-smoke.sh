@@ -9,6 +9,12 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 fixture_dir="${repo_root}/tests/fixtures/terraform-kind"
 test_dir="${repo_root}/tests/deploy-smoke"
 gitops_test_dir="${repo_root}/tests/gitops-behavior"
+gitops_convergence_test_dir="${gitops_test_dir}/convergence"
+gitops_upgrade_test_dir="${gitops_test_dir}/upgrade"
+gitops_prune_test_dir="${gitops_test_dir}/prune"
+gitops_broken_image_test_dir="${gitops_test_dir}/broken-image"
+gitops_recovery_test_dir="${gitops_test_dir}/recovery"
+gitops_broken_manifest_test_dir="${gitops_test_dir}/broken-manifest"
 report_dir="${DEPLOY_SMOKE_REPORT_DIR:-${repo_root}/test-results/deploy-smoke}"
 cluster_name="${CLUSTER_NAME:-shorturl-smoke}"
 assert_timeout="${DEPLOY_SMOKE_TIMEOUT:-10m}"
@@ -19,6 +25,40 @@ generated_kubeconfig="${fixture_dir}/${cluster_name}-config"
 
 # shellcheck source=scripts/lib/gitops-test-harness.sh
 source "${repo_root}/scripts/lib/gitops-test-harness.sh"
+
+run_gitops_test() {
+  local scenario_dir="$1"
+  local report_name="$2"
+  local value
+  local -a value_args=()
+  shift 2
+
+  for value in "$@"; do
+    value_args+=(--set-string "${value}")
+  done
+
+  chainsaw test "${scenario_dir}" \
+    --assert-timeout "${assert_timeout}" \
+    --report-format JUNIT-OPERATION \
+    --report-name "${report_name}" \
+    --report-path "${report_dir}" \
+    "${value_args[@]}" \
+    --no-color
+}
+
+refresh_gitops_apps() {
+  gitops_refresh_application root
+  gitops_refresh_application shorturl
+}
+
+shorturl_pod_uids() {
+  kubectl -n shorturl get pods \
+    --selector 'app.kubernetes.io/name=shorturl,app.kubernetes.io/component=app' \
+    -o json | jq -er '
+      select(.items | length > 0)
+      | [.items[].metadata.uid] | sort | join(":")
+    '
+}
 
 : "${GITOPS_REPO_URL:?GITOPS_REPO_URL must be the clone URL Argo CD can read}"
 : "${TARGET_REVISION:?TARGET_REVISION must be a commit SHA Argo CD can fetch}"
@@ -49,7 +89,14 @@ fi
 
 docker info >/dev/null
 chainsaw lint test --file "${test_dir}/chainsaw-test.yaml"
-chainsaw lint test --file "${gitops_test_dir}/chainsaw-test.yaml"
+chainsaw lint test --file "${gitops_convergence_test_dir}/chainsaw-test.yaml"
+chainsaw lint test --file "${gitops_upgrade_test_dir}/chainsaw-test.yaml"
+chainsaw lint test --file "${gitops_prune_test_dir}/chainsaw-test.yaml"
+chainsaw lint test --file \
+  "${gitops_broken_image_test_dir}/chainsaw-test.yaml"
+chainsaw lint test --file "${gitops_recovery_test_dir}/chainsaw-test.yaml"
+chainsaw lint test --file \
+  "${gitops_broken_manifest_test_dir}/chainsaw-test.yaml"
 
 mkdir -p "${report_dir}"
 rm -f "${report_dir}"/*.log "${report_dir}"/*.xml \
@@ -69,7 +116,8 @@ collect_diagnostics() {
     -n argocd -o yaml >"${report_dir}/shorturl-application.yaml" 2>&1 || true
   kubectl --kubeconfig "${kubeconfig_file}" get application root \
     -n argocd -o yaml >"${report_dir}/root-application.yaml" 2>&1 || true
-  kubectl --kubeconfig "${kubeconfig_file}" get pods,jobs -A -o wide \
+  kubectl --kubeconfig "${kubeconfig_file}" get \
+    deployments,replicasets,statefulsets,pods,jobs -A -o wide \
     >"${report_dir}/workloads.txt" 2>&1 || true
   kubectl --kubeconfig "${kubeconfig_file}" describe pods -n shorturl \
     >"${report_dir}/shorturl-pods-describe.txt" 2>&1 || true
@@ -151,6 +199,36 @@ export KUBECONFIG="${kubeconfig_file}"
 kind load docker-image --name "${cluster_name}" shorturl-ci:test
 kind load docker-image --name "${cluster_name}" shorturl-migrate-ci:test
 
+# Locally built images have no registry-provided repoDigest. Read the imported
+# manifest digest from containerd and add an explicit digest reference so CRI
+# can resolve the same image when the chart switches from tag to digest.
+node_image_ref="docker.io/library/shorturl-ci:test"
+working_image_digest="$(docker exec "${cluster_name}-control-plane" \
+  ctr --namespace k8s.io images list | awk -v image_ref="${node_image_ref}" '
+    NR == 1 {
+      for (column = 1; column <= NF; column++) {
+        if ($column == "DIGEST") {
+          digest_column = column
+        }
+      }
+      next
+    }
+    $1 == image_ref && digest_column {
+      print $digest_column
+      exit
+    }
+  ')"
+if [[ ! "${working_image_digest}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+  printf 'Could not resolve the containerd manifest digest for %s: %s\n' \
+    "${node_image_ref}" "${working_image_digest}" >&2
+  exit 1
+fi
+node_digest_ref="docker.io/library/shorturl-ci@${working_image_digest}"
+docker exec "${cluster_name}-control-plane" \
+  ctr --namespace k8s.io images tag "${node_image_ref}" "${node_digest_ref}"
+docker exec "${cluster_name}-control-plane" \
+  crictl inspecti "${node_digest_ref}" >/dev/null
+
 printf 'Running Chainsaw deployment and HTTP assertions...\n'
 chainsaw test "${test_dir}" \
   --assert-timeout "${assert_timeout}" \
@@ -171,22 +249,95 @@ gitops_wait_application_revision shorturl "${GITOPS_TEST_REVISION}"
 printf 'Committing a replica upgrade to the disposable Git branch...\n'
 values_file="${GITOPS_TEST_WORKTREE}/helm/shorturl/values-ci.yaml"
 sed -i.bak 's/^replicaCount: 1$/replicaCount: 2/' "${values_file}"
+sed -i.bak \
+  "0,/^  digest: \"\"$/s//  digest: \"${working_image_digest}\"/" \
+  "${values_file}"
 rm -f "${values_file}.bak"
-if ! grep -Fxq 'replicaCount: 2' "${values_file}"; then
-  printf 'Could not set the GitOps test replicaCount to 2.\n' >&2
+if ! grep -Fxq 'replicaCount: 2' "${values_file}" || \
+    ! grep -Fxq "  digest: \"${working_image_digest}\"" "${values_file}"; then
+  printf 'Could not set the GitOps test replica count and working digest.\n' >&2
   exit 1
 fi
-gitops_harness_commit "Test GitOps replica upgrade"
-gitops_refresh_application root
-gitops_refresh_application shorturl
+gitops_harness_commit "Test GitOps replica and digest upgrade"
+refresh_gitops_apps
 
-chainsaw test "${gitops_test_dir}" \
-  --assert-timeout "${assert_timeout}" \
-  --report-format JUNIT-OPERATION \
-  --report-name gitops-chainsaw-junit \
-  --report-path "${report_dir}" \
-  --set-string "revision=${GITOPS_TEST_REVISION}" \
-  --no-color
+run_gitops_test "${gitops_convergence_test_dir}" gitops-chainsaw-junit \
+  "revision=${GITOPS_TEST_REVISION}"
+
+printf 'Committing a ConfigMap rollout and prunable test resource...\n'
+pre_upgrade_checksum="$(kubectl -n shorturl get deployment shorturl -o json | \
+  jq -er '.spec.template.metadata.annotations["checksum/config"]')"
+pre_upgrade_pods="$(shorturl_pod_uids)"
+printf '\n# Mutable GitOps upgrade input.\nserver:\n  machineId: 2\n' \
+  >>"${values_file}"
+prunable_template="${GITOPS_TEST_WORKTREE}/helm/shorturl/templates/gitops-smoke-prunable.yaml"
+cp "${gitops_test_dir}/fixtures/prunable-configmap.yaml" \
+  "${prunable_template}"
+gitops_harness_commit "Test ConfigMap rollout and prune fixture"
+refresh_gitops_apps
+run_gitops_test "${gitops_upgrade_test_dir}" gitops-upgrade-junit \
+  "revision=${GITOPS_TEST_REVISION}" \
+  "previousChecksum=${pre_upgrade_checksum}" \
+  "previousPods=${pre_upgrade_pods}" \
+  "workingDigest=${working_image_digest}"
+
+printf 'Deleting the test resource from the next Git revision...\n'
+rm -f -- "${prunable_template}"
+gitops_harness_commit "Test Argo CD resource pruning"
+refresh_gitops_apps
+run_gitops_test "${gitops_prune_test_dir}" gitops-prune-junit \
+  "revision=${GITOPS_TEST_REVISION}"
+
+working_pods="$(shorturl_pod_uids)"
+broken_image_digest="sha256:0000000000000000000000000000000000000000000000000000000000000000"
+printf 'Committing a deliberately unavailable image digest...\n'
+sed -i.bak \
+  "0,/^  digest: \"${working_image_digest}\"$/s//  digest: \"${broken_image_digest}\"/" \
+  "${values_file}"
+rm -f "${values_file}.bak"
+grep -Fxq "  digest: \"${broken_image_digest}\"" "${values_file}"
+gitops_harness_commit "Test unavailable ShortUrl image digest"
+refresh_gitops_apps
+run_gitops_test "${gitops_broken_image_test_dir}" \
+  gitops-broken-image-junit \
+  "revision=${GITOPS_TEST_REVISION}" \
+  "brokenDigest=${broken_image_digest}" \
+  "workingPods=${working_pods}"
+
+printf 'Rolling the image digest back through Git...\n'
+sed -i.bak \
+  "0,/^  digest: \"${broken_image_digest}\"$/s//  digest: \"${working_image_digest}\"/" \
+  "${values_file}"
+rm -f "${values_file}.bak"
+grep -Fxq "  digest: \"${working_image_digest}\"" "${values_file}"
+gitops_harness_commit "Rollback to the working ShortUrl image digest"
+refresh_gitops_apps
+run_gitops_test "${gitops_recovery_test_dir}" gitops-rollback-junit \
+  "revision=${GITOPS_TEST_REVISION}" \
+  "workingDigest=${working_image_digest}" \
+  "retainedPods=${working_pods}"
+
+stable_pods="$(shorturl_pod_uids)"
+broken_template="${GITOPS_TEST_WORKTREE}/helm/shorturl/templates/gitops-smoke-broken.yaml"
+printf 'Committing a manifest that the Kubernetes API rejects...\n'
+cp "${gitops_test_dir}/fixtures/broken-configmap.yaml" "${broken_template}"
+gitops_harness_commit "Test controlled broken manifest failure"
+refresh_gitops_apps
+run_gitops_test "${gitops_broken_manifest_test_dir}" \
+  gitops-broken-manifest-junit \
+  "revision=${GITOPS_TEST_REVISION}" \
+  "stablePods=${stable_pods}"
+
+printf 'Removing the broken manifest through Git...\n'
+rm -f -- "${broken_template}"
+gitops_harness_commit "Recover from the broken manifest"
+refresh_gitops_apps
+run_gitops_test "${gitops_recovery_test_dir}" \
+  gitops-manifest-recovery-junit \
+  "revision=${GITOPS_TEST_REVISION}" \
+  "workingDigest=${working_image_digest}" \
+  "retainedPods=${stable_pods}"
+gitops_wait_application_revision root "${GITOPS_TEST_REVISION}"
 
 # Restore Terraform's declared root source before checking its convergence.
 printf 'Restoring the root Application to the pinned source revision...\n'

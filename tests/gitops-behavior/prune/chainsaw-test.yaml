@@ -1,0 +1,36 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: gitops-prune
+spec:
+  namespace: default
+  steps:
+    - name: removed Git resource is pruned from the cluster
+      try:
+        - assert:
+            resource:
+              apiVersion: argoproj.io/v1alpha1
+              kind: Application
+              metadata:
+                name: shorturl
+                namespace: argocd
+              status:
+                sync:
+                  revision: ($values.revision)
+                  status: Synced
+                health:
+                  status: Healthy
+        - script:
+            shell: bash
+            shellArgs: [-c]
+            timeout: 2m
+            content: |
+              set -euo pipefail
+              for _ in $(seq 1 120); do
+                if ! kubectl -n shorturl get configmap gitops-smoke-prunable \
+                  >/dev/null 2>&1; then
+                  exit 0
+                fi
+                sleep 1
+              done
+              exit 1

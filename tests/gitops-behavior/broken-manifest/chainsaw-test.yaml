@@ -1,0 +1,69 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: gitops-broken-manifest
+spec:
+  namespace: default
+  steps:
+    - name: rejected manifest leaves the current workload available
+      try:
+        - script:
+            shell: bash
+            shellArgs: [-c]
+            timeout: 4m
+            env:
+              - name: EXPECTED_REVISION
+                value: ($values.revision)
+              - name: STABLE_PODS
+                value: ($values.stablePods)
+            content: |
+              set -euo pipefail
+              pod_selector='app.kubernetes.io/name=shorturl,app.kubernetes.io/component=app'
+
+              failed=false
+              for _ in $(seq 1 210); do
+                application_json="$(kubectl -n argocd get application shorturl \
+                  -o json)"
+                if jq -e --arg revision "${EXPECTED_REVISION}" '
+                    .status.operationState.phase == "Failed" and
+                    .status.operationState.syncResult.revision == $revision and
+                    any(.status.operationState.syncResult.resources[]?;
+                      .status == "SyncFailed")
+                  ' <<<"${application_json}" >/dev/null; then
+                  failed=true
+                  break
+                fi
+                sleep 1
+              done
+              [[ "${failed}" == true ]]
+
+              deployment_json="$(kubectl -n shorturl get deployment shorturl \
+                -o json)"
+              pods_json="$(kubectl -n shorturl get pods \
+                --selector "${pod_selector}" -o json)"
+              jq -e '
+                .status.readyReplicas == 2 and
+                .status.availableReplicas == 2
+              ' <<<"${deployment_json}" >/dev/null
+              test "$(jq -r '
+                [.items[].metadata.uid] | sort | join(":")
+              ' <<<"${pods_json}")" = "${STABLE_PODS}"
+
+              log_file="$(mktemp)"
+              kubectl -n shorturl port-forward service/shorturl 18585:8585 \
+                >"${log_file}" 2>&1 &
+              forward_pid=$!
+              cleanup() {
+                kill "${forward_pid}" >/dev/null 2>&1 || true
+                wait "${forward_pid}" >/dev/null 2>&1 || true
+                rm -f "${log_file}"
+              }
+              trap cleanup EXIT
+              for _ in $(seq 1 30); do
+                if curl --silent --fail http://127.0.0.1:18585/readyz \
+                  >/dev/null; then
+                  exit 0
+                fi
+                sleep 1
+              done
+              exit 1
