@@ -23,7 +23,9 @@ new commit and completes the two-replica rollout. While the mutable revision is
 active, the test patches the live Deployment to three replicas and verifies
 that Argo CD self-heals it back to the two replicas declared by the same Git
 commit. It then restores the root Application to the original URL and SHA
-before checking Terraform convergence.
+before checking Terraform convergence. A forced synchronization of the same
+commit must also complete without changing the Deployment generation or
+replacing its Pods, and leave every tracked resource Synced.
 
 The assertions cover:
 
@@ -40,6 +42,8 @@ The assertions cover:
   pinned revision;
 - live replica drift being accepted by the Kubernetes API and then self-healed
   to the value from Git without changing the synchronized revision;
+- a forced repeat sync of the same revision completing successfully without a
+  resource diff, Deployment spec update, or Pod replacement;
 - an empty convergence plan followed by a second successful Terraform apply.
 
 The `EXIT`, `INT`, and `TERM` handlers always run `terraform destroy`. If destroy

@@ -152,3 +152,99 @@ spec:
                 sleep 1
               done
               exit 1
+
+    - name: repeated sync of the same revision is idempotent
+      try:
+        - script:
+            shell: bash
+            shellArgs: [-c]
+            timeout: 5m
+            env:
+              - name: EXPECTED_REVISION
+                value: ($values.revision)
+            content: |
+              set -euo pipefail
+              application=shorturl
+              initiator=gitops-idempotency-smoke
+              pod_selector='app.kubernetes.io/name=shorturl,app.kubernetes.io/component=app'
+
+              for _ in $(seq 1 60); do
+                if kubectl -n argocd get application "${application}" \
+                  -o json | jq -e '.operation == null' >/dev/null; then
+                  break
+                fi
+                sleep 1
+              done
+              kubectl -n argocd get application "${application}" \
+                -o json | jq -e '.operation == null' >/dev/null
+
+              before_generation="$(kubectl -n shorturl get deployment shorturl \
+                -o jsonpath='{.metadata.generation}')"
+              before_pods="$(kubectl -n shorturl get pods \
+                --selector "${pod_selector}" -o json | jq -r \
+                '[.items[].metadata.uid] | sort | join(",")')"
+              test -n "${before_pods}"
+
+              operation_patch="$(jq -cn \
+                --arg initiator "${initiator}" \
+                --arg revision "${EXPECTED_REVISION}" '
+                  {
+                    operation: {
+                      initiatedBy: {username: $initiator},
+                      sync: {
+                        revision: $revision,
+                        syncStrategy: {hook: {}}
+                      }
+                    }
+                  }
+                ')"
+              kubectl -n argocd patch application "${application}" \
+                --type merge --patch "${operation_patch}" >/dev/null
+
+              for _ in $(seq 1 240); do
+                application_json="$(kubectl -n argocd get application \
+                  "${application}" -o json)"
+                if jq -e \
+                  --arg initiator "${initiator}" \
+                  --arg revision "${EXPECTED_REVISION}" '
+                    .operation == null and
+                    .status.operationState.phase == "Succeeded" and
+                    .status.operationState.operation.initiatedBy.username ==
+                      $initiator and
+                    .status.operationState.syncResult.revision == $revision and
+                    .status.sync.revision == $revision and
+                    .status.sync.status == "Synced" and
+                    .status.health.status == "Healthy" and
+                    ([.status.resources[]?
+                      | select(.status != "Synced")] | length == 0)
+                  ' <<<"${application_json}" >/dev/null; then
+                  break
+                fi
+                sleep 1
+              done
+
+              application_json="$(kubectl -n argocd get application \
+                "${application}" -o json)"
+              jq -e \
+                --arg initiator "${initiator}" \
+                --arg revision "${EXPECTED_REVISION}" '
+                  .operation == null and
+                  .status.operationState.phase == "Succeeded" and
+                  .status.operationState.operation.initiatedBy.username ==
+                    $initiator and
+                  .status.operationState.syncResult.revision == $revision and
+                  .status.sync.revision == $revision and
+                  .status.sync.status == "Synced" and
+                  .status.health.status == "Healthy" and
+                  ([.status.resources[]?
+                    | select(.status != "Synced")] | length == 0)
+                ' <<<"${application_json}" >/dev/null
+
+              after_generation="$(kubectl -n shorturl get deployment shorturl \
+                -o jsonpath='{.metadata.generation}')"
+              after_pods="$(kubectl -n shorturl get pods \
+                --selector "${pod_selector}" -o json | jq -r \
+                '[.items[].metadata.uid] | sort | join(",")')"
+
+              test "${after_generation}" = "${before_generation}"
+              test "${after_pods}" = "${before_pods}"
