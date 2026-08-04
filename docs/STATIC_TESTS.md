@@ -95,6 +95,14 @@ the incremental implementation of the full gate it includes only completed
 checks; unfinished groups are never represented by empty targets that could
 pass silently.
 
+The `static-gate` CI job checks out complete history, installs the exact
+versions from `tools/static-versions.env`, and then invokes only
+`make test-static`. Tool installation is deliberately outside the Makefile:
+local execution uses the developer's compatible tools, while the ephemeral CI
+runner is prepared explicitly by `scripts/install-static-tools-ci.sh`.
+MegaLinter remains a separate job for the style checks introduced before the
+unified static gate.
+
 ## Install in WSL2
 
 CI uses the exact `*_VERSION` values from `tools/static-versions.env`. Locally,
@@ -134,13 +142,14 @@ pipx install "yamllint==${YAMLLINT_VERSION}"
 npm install --global "markdownlint-cli@${MARKDOWNLINT_VERSION}"
 ```
 
-Install the Helm plugin from its versioned release archive:
+Install the Helm plugin from its pinned VCS tag:
 
 ```bash
 source tools/static-versions.env
 
 helm plugin install \
-  "https://github.com/helm-unittest/helm-unittest/releases/download/v${HELM_UNITTEST_VERSION}/unittest-${HELM_UNITTEST_VERSION}.tgz"
+  https://github.com/helm-unittest/helm-unittest.git \
+  --version "v${HELM_UNITTEST_VERSION}"
 ```
 
 For the remaining standalone binaries, download the Linux archive for the
