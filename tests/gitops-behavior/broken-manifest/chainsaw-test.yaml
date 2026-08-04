@@ -20,22 +20,26 @@ spec:
               set -euo pipefail
               pod_selector='app.kubernetes.io/name=shorturl,app.kubernetes.io/component=app'
 
-              failed=false
+              rejected=false
               for _ in $(seq 1 210); do
                 application_json="$(kubectl -n argocd get application shorturl \
                   -o json)"
                 if jq -e --arg revision "${EXPECTED_REVISION}" '
-                    .status.operationState.phase == "Failed" and
+                    .status.sync.revision == $revision and
+                    .status.sync.status == "OutOfSync" and
                     .status.operationState.syncResult.revision == $revision and
+                    (.status.operationState.phase == "Running" or
+                     .status.operationState.phase == "Failed" or
+                     .status.operationState.phase == "Error") and
                     any(.status.operationState.syncResult.resources[]?;
                       .status == "SyncFailed")
                   ' <<<"${application_json}" >/dev/null; then
-                  failed=true
+                  rejected=true
                   break
                 fi
                 sleep 1
               done
-              [[ "${failed}" == true ]]
+              [[ "${rejected}" == true ]]
 
               deployment_json="$(kubectl -n shorturl get deployment shorturl \
                 -o json)"

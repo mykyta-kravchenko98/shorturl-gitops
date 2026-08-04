@@ -51,6 +51,11 @@ refresh_gitops_apps() {
   gitops_refresh_application shorturl
 }
 
+recover_gitops_apps() {
+  gitops_terminate_application_operation shorturl
+  refresh_gitops_apps
+}
+
 shorturl_pod_uids() {
   kubectl -n shorturl get pods \
     --selector 'app.kubernetes.io/name=shorturl,app.kubernetes.io/component=app' \
@@ -213,9 +218,11 @@ working_image_digest="$(docker exec "${cluster_name}-control-plane" \
       }
       next
     }
-    $1 == image_ref && digest_column {
-      print $digest_column
-      exit
+    $1 == image_ref && digest_column && !digest {
+      digest = $digest_column
+    }
+    END {
+      print digest
     }
   ')"
 if [[ ! "${working_image_digest}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
@@ -311,7 +318,7 @@ sed -i.bak \
 rm -f "${values_file}.bak"
 grep -Fxq "  digest: \"${working_image_digest}\"" "${values_file}"
 gitops_harness_commit "Rollback to the working ShortUrl image digest"
-refresh_gitops_apps
+recover_gitops_apps
 run_gitops_test "${gitops_recovery_test_dir}" gitops-rollback-junit \
   "revision=${GITOPS_TEST_REVISION}" \
   "workingDigest=${working_image_digest}" \
@@ -331,7 +338,7 @@ run_gitops_test "${gitops_broken_manifest_test_dir}" \
 printf 'Removing the broken manifest through Git...\n'
 rm -f -- "${broken_template}"
 gitops_harness_commit "Recover from the broken manifest"
-refresh_gitops_apps
+recover_gitops_apps
 run_gitops_test "${gitops_recovery_test_dir}" \
   gitops-manifest-recovery-junit \
   "revision=${GITOPS_TEST_REVISION}" \
