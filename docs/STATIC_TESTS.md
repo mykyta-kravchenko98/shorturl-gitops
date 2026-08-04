@@ -25,6 +25,7 @@ make test-kustomize
 make test-kubeconform
 make test-terraform
 make test-policies
+make test-repository
 make lint
 ```
 
@@ -81,6 +82,13 @@ revision, every Helm hook must declare a deletion policy, and hook Jobs must
 have a positive execution deadline. The disposable CI image fixture is the
 only exception to production digest pinning; `latest` remains forbidden there
 as well.
+
+`make test-repository` validates every GitHub Actions workflow with actionlint
+and audits it offline with zizmor. It parses every Grafana dashboard JSON file
+and requires each dashboard root to be an object. Gitleaks scans every commit
+reachable from every local Git ref, rather than limiting the scan to the PR
+diff. A shallow clone fails explicitly because it cannot provide the complete
+history required by this gate; CI therefore checks out with `fetch-depth: 0`.
 
 `make test-static` is the aggregate entry point used locally and in CI. During
 the incremental implementation of the full gate it includes only completed
