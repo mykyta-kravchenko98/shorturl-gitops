@@ -31,8 +31,33 @@ tests:
           path: kind
           value: RoleBinding
       - equal:
+          path: metadata.annotations["helm.sh/hook-delete-policy"]
+          value: before-hook-creation
+        template: templates/ecr-refresh-rbac.yaml
+        documentSelector:
+          path: kind
+          value: ServiceAccount
+      - equal:
+          path: metadata.annotations["helm.sh/hook-delete-policy"]
+          value: before-hook-creation
+        template: templates/ecr-refresh-rbac.yaml
+        documentSelector:
+          path: kind
+          value: Role
+      - equal:
+          path: metadata.annotations["helm.sh/hook-delete-policy"]
+          value: before-hook-creation
+        template: templates/ecr-refresh-rbac.yaml
+        documentSelector:
+          path: kind
+          value: RoleBinding
+      - equal:
           path: metadata.annotations["helm.sh/hook-weight"]
           value: "-20"
+        template: templates/ecr-refresh-script-configmap.yaml
+      - equal:
+          path: metadata.annotations["helm.sh/hook-delete-policy"]
+          value: before-hook-creation
         template: templates/ecr-refresh-script-configmap.yaml
 
   - it: runs the ECR seed after its dependencies and cleans it up
@@ -51,6 +76,10 @@ tests:
           path: metadata.annotations["helm.sh/hook-delete-policy"]
           value: before-hook-creation,hook-succeeded
         template: templates/ecr-refresh-seed-job.yaml
+      - equal:
+          path: spec.activeDeadlineSeconds
+          value: 300
+        template: templates/ecr-refresh-seed-job.yaml
 
   - it: runs migrations after install or upgrade and cleans the Job up
     set:
@@ -67,6 +96,10 @@ tests:
       - equal:
           path: metadata.annotations["helm.sh/hook-delete-policy"]
           value: before-hook-creation,hook-succeeded
+        template: templates/postgres-migrate-job.yaml
+      - equal:
+          path: spec.activeDeadlineSeconds
+          value: 600
         template: templates/postgres-migrate-job.yaml
 
   - it: omits ECR hooks when refresh is disabled

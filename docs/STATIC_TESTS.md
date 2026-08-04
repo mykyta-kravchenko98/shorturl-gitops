@@ -48,6 +48,11 @@ External Secrets Operator, CredentialRotation, and TrafficScenario use the
 vendored schemas under `schemas/kubeconform/`. Strict mode is mandatory, and a
 negative probe confirms that an unknown schema fails instead of being skipped.
 
+Kubeconform and Conftest call the same `scripts/render-static-manifests.sh`
+helper. The shared renderer is the canonical definition of the Helm matrix and
+Kustomize inputs, preventing schema and policy checks from silently covering
+different manifests while keeping both focused targets independently runnable.
+
 Custom schemas are regenerated explicitly with
 `make update-kubeconform-schemas`. This maintenance command is separate from
 the read-only static gate because it uses the network and updates vendored
@@ -65,11 +70,17 @@ runs `plan`, `apply`, or `destroy`.
 `make test-policies` renders the same Helm matrix and every Kustomize directory,
 then evaluates the combined manifests with Conftest/Rego. Combining documents
 allows cross-resource rules to compare Service selectors with workload pod
-labels and to resolve RoleBinding references. The initial policy set rejects
-`latest`, requires digest-pinned production container images, requires explicit
+labels and to resolve RoleBinding references. The policy set rejects `latest`,
+requires digest-pinned production container images, requires explicit
 namespaces for namespaced resources and RBAC subjects, and validates workload
-and Service selectors. The disposable CI image fixture is the only exception
-to production digest pinning; `latest` remains forbidden there as well.
+and Service selectors. Every container and init container must define CPU and
+memory requests and limits, run as non-root, use an enabled seccomp profile,
+and drop all Linux capabilities. Every long-lived workload container must also
+define liveness and readiness probes. Git-based Argo Applications must use one
+revision, every Helm hook must declare a deletion policy, and hook Jobs must
+have a positive execution deadline. The disposable CI image fixture is the
+only exception to production digest pinning; `latest` remains forbidden there
+as well.
 
 `make test-static` is the aggregate entry point used locally and in CI. During
 the incremental implementation of the full gate it includes only completed

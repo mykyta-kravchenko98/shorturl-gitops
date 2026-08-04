@@ -51,6 +51,17 @@ pod_containers(resource) := array.concat(
   object.get(pod_spec(resource), "containers", []),
 )
 
+workload_containers(resource) := object.get(
+  pod_spec(resource),
+  "containers",
+  [],
+)
+
+secure_seccomp(context) if {
+  profile := object.get(context, "seccompProfile", {})
+  object.get(profile, "type", "") in {"Localhost", "RuntimeDefault"}
+}
+
 selector_matches_labels(selector, labels) if {
   count(selector) > 0
   every key, value in selector {

@@ -46,6 +46,10 @@ receivers:
 processors:
   batch: {}
 
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+
 exporters:
   otlp/gateway:
     endpoint: {{ .Values.otel.gatewayEndpoint }}
@@ -53,6 +57,7 @@ exporters:
       insecure: true
 
 service:
+  extensions: [health_check]
   pipelines:
     traces:
       receivers: [otlp]
