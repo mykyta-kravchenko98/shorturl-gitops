@@ -70,10 +70,13 @@ gitops_harness_start() {
     git_host="host.docker.internal"
   elif [[ "$(uname -s)" == "Linux" ]]; then
     git_host="$(docker network inspect "${cluster_network}" | jq -r '
-      .[0].IPAM.Config[]
-      | select(.Gateway | contains(":") | not)
-      | .Gateway
-    ' | head -n 1)"
+      [
+        .[0].IPAM.Config[]?
+        | .Gateway?
+        | strings
+        | select(contains(":") | not)
+      ][0] // empty
+    ')"
   else
     git_host="host.docker.internal"
   fi
