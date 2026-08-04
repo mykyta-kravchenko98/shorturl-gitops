@@ -26,9 +26,9 @@ spec:
         runAsUser: 999
         runAsGroup: 1000
         fsGroup: 1000
-        # Existing AOF files may have been created before the pod was hardened.
-        # Reconcile nested volume ownership as well as the mount root.
-        fsGroupChangePolicy: Always
+        # The existing PVC was repaired once when non-root execution was added.
+        # Avoid recursively walking all AOF files on every subsequent mount.
+        fsGroupChangePolicy: OnRootMismatch
         seccompProfile:
           type: RuntimeDefault
       containers:
