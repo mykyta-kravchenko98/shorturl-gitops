@@ -3,6 +3,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: ecr-pull-refresh-script
+  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "shorturl.labels" . | nindent 4 }}
   annotations:

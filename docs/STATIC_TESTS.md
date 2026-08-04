@@ -24,6 +24,7 @@ make test-helm
 make test-kustomize
 make test-kubeconform
 make test-terraform
+make test-policies
 make lint
 ```
 
@@ -60,6 +61,15 @@ the developer's initialized working directory or contact the configured S3
 backend. TFLint checks every Terraform directory using the repository config,
 and Checkov scans both the deployment code and the CI fixture. The gate never
 runs `plan`, `apply`, or `destroy`.
+
+`make test-policies` renders the same Helm matrix and every Kustomize directory,
+then evaluates the combined manifests with Conftest/Rego. Combining documents
+allows cross-resource rules to compare Service selectors with workload pod
+labels and to resolve RoleBinding references. The initial policy set rejects
+`latest`, requires digest-pinned production container images, requires explicit
+namespaces for namespaced resources and RBAC subjects, and validates workload
+and Service selectors. The disposable CI image fixture is the only exception
+to production digest pinning; `latest` remains forbidden there as well.
 
 `make test-static` is the aggregate entry point used locally and in CI. During
 the incremental implementation of the full gate it includes only completed

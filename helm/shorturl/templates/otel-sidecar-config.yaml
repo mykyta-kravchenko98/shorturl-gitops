@@ -3,6 +3,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: otel-sidecar-config
+  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "shorturl.labels" . | nindent 4 }}
 data:

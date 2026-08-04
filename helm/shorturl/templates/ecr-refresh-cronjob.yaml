@@ -6,6 +6,7 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: ecr-pull-refresh
+  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "shorturl.labels" . | nindent 4 }}
 spec:
