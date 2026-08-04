@@ -19,8 +19,11 @@ After the baseline passes, the same cluster exercises a mutable GitOps
 revision. The test creates a temporary branch and exposes its bare repository
 through a short-lived read-only `git daemon`, switches the root Application to
 that branch, commits `replicaCount: 2`, and verifies that Argo CD observes the
-new commit and completes the two-replica rollout. It then restores the root
-Application to the original URL and SHA before checking Terraform convergence.
+new commit and completes the two-replica rollout. While the mutable revision is
+active, the test patches the live Deployment to three replicas and verifies
+that Argo CD self-heals it back to the two replicas declared by the same Git
+commit. It then restores the root Application to the original URL and SHA
+before checking Terraform convergence.
 
 The assertions cover:
 
@@ -35,6 +38,8 @@ The assertions cover:
 - a committed replica change flowing from a disposable Git revision through
   Argo CD to a healthy two-replica rollout, followed by restoration to the
   pinned revision;
+- live replica drift being accepted by the Kubernetes API and then self-healed
+  to the value from Git without changing the synchronized revision;
 - an empty convergence plan followed by a second successful Terraform apply.
 
 The `EXIT`, `INT`, and `TERM` handlers always run `terraform destroy`. If destroy

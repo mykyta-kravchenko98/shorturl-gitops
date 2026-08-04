@@ -1,7 +1,7 @@
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: Test
 metadata:
-  name: gitops-revision-upgrade
+  name: gitops-upgrade-and-self-heal
 spec:
   namespace: default
   steps:
@@ -27,6 +27,10 @@ spec:
               metadata:
                 name: shorturl
                 namespace: argocd
+              spec:
+                syncPolicy:
+                  automated:
+                    selfHeal: true
               status:
                 sync:
                   revision: ($values.revision)
@@ -36,6 +40,79 @@ spec:
 
     - name: committed replica change completes its rollout
       try:
+        - assert:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: shorturl
+                namespace: shorturl
+              spec:
+                replicas: 2
+              status:
+                replicas: 2
+                readyReplicas: 2
+                updatedReplicas: 2
+                availableReplicas: 2
+        - script:
+            shell: bash
+            shellArgs: [-c]
+            timeout: 1m
+            content: |
+              set -euo pipefail
+              log_file="$(mktemp)"
+              kubectl -n shorturl port-forward service/shorturl 18585:8585 \
+                >"${log_file}" 2>&1 &
+              forward_pid=$!
+              cleanup() {
+                kill "${forward_pid}" >/dev/null 2>&1 || true
+                wait "${forward_pid}" >/dev/null 2>&1 || true
+                rm -f "${log_file}"
+              }
+              trap cleanup EXIT
+
+              for _ in $(seq 1 30); do
+                if curl --silent --fail http://127.0.0.1:18585/readyz \
+                  >/dev/null; then
+                  exit 0
+                fi
+                sleep 1
+              done
+              exit 1
+
+    - name: introduce live replica drift
+      try:
+        - script:
+            shell: bash
+            shellArgs: [-c]
+            timeout: 1m
+            content: |
+              set -euo pipefail
+              response="$(kubectl -n shorturl patch deployment shorturl \
+                --type merge \
+                --patch '{"spec":{"replicas":3}}' \
+                --output json)"
+              jq -e '.spec.replicas == 3' <<<"${response}" >/dev/null
+
+              # Force drift detection; automated selfHeal still owns the sync.
+              kubectl -n argocd annotate application shorturl \
+                argocd.argoproj.io/refresh=hard --overwrite >/dev/null
+
+    - name: Argo CD restores the Git replica count
+      try:
+        - assert:
+            resource:
+              apiVersion: argoproj.io/v1alpha1
+              kind: Application
+              metadata:
+                name: shorturl
+                namespace: argocd
+              status:
+                sync:
+                  revision: ($values.revision)
+                  status: Synced
+                health:
+                  status: Healthy
         - assert:
             resource:
               apiVersion: apps/v1
