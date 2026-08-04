@@ -59,13 +59,21 @@ gitops_harness_start() {
     "${origin_dir}" >"${report_dir}/git-daemon.log" 2>&1 &
   GITOPS_TEST_DAEMON_PID=$!
 
-  # Linux containers reach a process bound on the Docker host through the
-  # bridge gateway. Docker Desktop provides the stable hostname instead.
+  # Docker Desktop exposes the host through a stable DNS name, including when
+  # the caller itself runs under WSL and therefore reports uname=Linux.
+  # Native Linux uses the IPv4 bridge gateway; dual-stack networks may list
+  # their IPv6 gateway first, while git daemon below intentionally binds IPv4.
   if [[ -n "${GITOPS_TEST_GIT_HOST:-}" ]]; then
     git_host="${GITOPS_TEST_GIT_HOST}"
+  elif docker info --format '{{.OperatingSystem}}' 2>/dev/null | \
+      grep -Fqi 'Docker Desktop'; then
+    git_host="host.docker.internal"
   elif [[ "$(uname -s)" == "Linux" ]]; then
-    git_host="$(docker network inspect "${cluster_network}" \
-      --format '{{(index .IPAM.Config 0).Gateway}}')"
+    git_host="$(docker network inspect "${cluster_network}" | jq -r '
+      .[0].IPAM.Config[]
+      | select(.Gateway | contains(":") | not)
+      | .Gateway
+    ' | head -n 1)"
   else
     git_host="host.docker.internal"
   fi
