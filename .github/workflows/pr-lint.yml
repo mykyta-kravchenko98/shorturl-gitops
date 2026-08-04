@@ -8,6 +8,36 @@ on:
     branches: [main]
 
 jobs:
+  static-gate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Read pinned installer version
+        id: static_versions
+        run: |
+          mise_version="$(awk -F= '$1 == "MISE_VERSION" { print $2 }' tools/static-versions.env)"
+          test -n "${mise_version}"
+          printf 'mise=%s\n' "${mise_version}" >> "${GITHUB_OUTPUT}"
+
+      - name: Install mise
+        uses: jdx/mise-action@5228313ee0372e111a38da051671ca30fc5a96db # v3
+        with:
+          version: ${{ steps.static_versions.outputs.mise }}
+          install: false
+          cache: false
+
+      - name: Install pinned static toolchain
+        run: bash ./scripts/install-static-tools-ci.sh
+
+      - name: Run complete static gate
+        run: make test-static
+
   megalinter:
     runs-on: ubuntu-latest
     permissions:

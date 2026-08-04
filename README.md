@@ -244,9 +244,9 @@ kubectl -n shorturl get pods,jobs,externalsecrets,credentialrotations
 kubectl -n shorturl get trafficscenarios
 ```
 
-Pull requests targeting `main` are checked by MegaLinter. It validates
-Terraform, Helm, Kubernetes YAML, shell scripts, Markdown, and scans for
-accidentally committed secrets.
+Pull requests targeting `main` run the complete `make test-static` gate with a
+pinned CI toolchain. MegaLinter remains as a separate style-analysis job for
+Terraform, Helm, Kubernetes YAML, shell scripts, Markdown, and secret scanning.
 
 ## Stopping and Destroying the Environment
 

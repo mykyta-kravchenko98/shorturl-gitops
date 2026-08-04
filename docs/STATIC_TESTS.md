@@ -95,6 +95,14 @@ the incremental implementation of the full gate it includes only completed
 checks; unfinished groups are never represented by empty targets that could
 pass silently.
 
+The `static-gate` CI job checks out complete history, installs the exact
+versions from `tools/static-versions.env`, and then invokes only
+`make test-static`. Tool installation is deliberately outside the Makefile:
+local execution uses the developer's compatible tools, while the ephemeral CI
+runner is prepared explicitly by `scripts/install-static-tools-ci.sh`.
+MegaLinter remains a separate job for the style checks introduced before the
+unified static gate.
+
 ## Install in WSL2
 
 CI uses the exact `*_VERSION` values from `tools/static-versions.env`. Locally,
