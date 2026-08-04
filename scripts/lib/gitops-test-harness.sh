@@ -111,13 +111,14 @@ gitops_harness_start() {
 gitops_harness_commit() {
   local message="$1"
 
-  if git -C "${GITOPS_TEST_WORKTREE}" diff --quiet && \
-      git -C "${GITOPS_TEST_WORKTREE}" diff --cached --quiet; then
+  # Stage first so the check includes new untracked files and deletions as
+  # well as modifications to files Git already knows about.
+  git -C "${GITOPS_TEST_WORKTREE}" add --all
+  if git -C "${GITOPS_TEST_WORKTREE}" diff --cached --quiet; then
     printf 'The GitOps test revision has no changes to commit.\n' >&2
     return 1
   fi
 
-  git -C "${GITOPS_TEST_WORKTREE}" add --all
   git -C "${GITOPS_TEST_WORKTREE}" commit --message "${message}" >/dev/null
   git -C "${GITOPS_TEST_WORKTREE}" push origin \
     "${GITOPS_TEST_BRANCH}" >/dev/null
@@ -178,6 +179,34 @@ gitops_refresh_application() {
 
   kubectl -n argocd annotate application "${application}" \
     argocd.argoproj.io/refresh=hard --overwrite >/dev/null
+}
+
+gitops_terminate_application_operation() {
+  local application="$1"
+
+  if ! kubectl -n argocd get application "${application}" -o json | jq -e '
+    .operation != null and .status.operationState.phase == "Running"
+  ' >/dev/null; then
+    return 0
+  fi
+
+  printf 'Terminating the stale Argo CD operation for %s...\n' "${application}"
+  # This mirrors Argo CD's TerminateOperation API: the controller observes the
+  # Terminating phase, aborts the running sync and then clears .operation.
+  kubectl -n argocd patch application "${application}" --type merge \
+    --patch '{"status":{"operationState":{"phase":"Terminating"}}}' >/dev/null
+
+  for _ in $(seq 1 60); do
+    if kubectl -n argocd get application "${application}" -o json | jq -e \
+      '.operation == null' >/dev/null; then
+      return 0
+    fi
+    sleep 1
+  done
+
+  printf 'Argo CD did not terminate the stale operation for %s.\n' \
+    "${application}" >&2
+  return 1
 }
 
 gitops_wait_application_source() {

@@ -1,0 +1,96 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: gitops-broken-image
+spec:
+  namespace: default
+  steps:
+    - name: failed image rollout preserves working Pods
+      try:
+        - script:
+            shell: bash
+            shellArgs: [-c]
+            timeout: 4m
+            env:
+              - name: EXPECTED_REVISION
+                value: ($values.revision)
+              - name: BROKEN_DIGEST
+                value: ($values.brokenDigest)
+              - name: WORKING_PODS
+                value: ($values.workingPods)
+            content: |
+              set -euo pipefail
+              pod_selector='app.kubernetes.io/name=shorturl,app.kubernetes.io/component=app'
+              broken_image="shorturl-ci@${BROKEN_DIGEST}"
+
+              working_pods_ready() {
+                local pods_json="$1"
+                local uid
+                IFS=: read -r -a working_uids <<<"${WORKING_PODS}"
+                for uid in "${working_uids[@]}"; do
+                  jq -e --arg uid "${uid}" '
+                    any(.items[];
+                      .metadata.uid == $uid and
+                      .metadata.deletionTimestamp == null and
+                      any(.status.conditions[]?;
+                        .type == "Ready" and .status == "True"))
+                  ' <<<"${pods_json}" >/dev/null || return 1
+                done
+              }
+
+              converged=false
+              for _ in $(seq 1 210); do
+                application_json="$(kubectl -n argocd get application shorturl \
+                  -o json)"
+                deployment_json="$(kubectl -n shorturl get deployment shorturl \
+                  -o json)"
+                pods_json="$(kubectl -n shorturl get pods \
+                  --selector "${pod_selector}" -o json)"
+
+                if jq -e --arg revision "${EXPECTED_REVISION}" '
+                    .status.sync.revision == $revision and
+                    .status.sync.status == "Synced" and
+                    (.status.health.status == "Progressing" or
+                     .status.health.status == "Degraded")
+                  ' <<<"${application_json}" >/dev/null && \
+                  jq -e --arg image "${broken_image}" '
+                    (.spec.strategy.rollingUpdate.maxUnavailable == 0 or
+                     .spec.strategy.rollingUpdate.maxUnavailable == "0") and
+                    (.status.availableReplicas >= 2) and
+                    any(.spec.template.spec.containers[];
+                      .name == "shorturl" and .image == $image)
+                  ' <<<"${deployment_json}" >/dev/null && \
+                  jq -e --arg image "${broken_image}" '
+                    any(.items[];
+                      any(.spec.containers[]?;
+                        .name == "shorturl" and .image == $image) and
+                      any(.status.containerStatuses[]?;
+                        .state.waiting.reason == "ErrImageNeverPull" or
+                        .state.waiting.reason == "ImagePullBackOff"))
+                  ' <<<"${pods_json}" >/dev/null && \
+                  working_pods_ready "${pods_json}"; then
+                  converged=true
+                  break
+                fi
+                sleep 1
+              done
+              [[ "${converged}" == true ]]
+
+              log_file="$(mktemp)"
+              kubectl -n shorturl port-forward service/shorturl 18585:8585 \
+                >"${log_file}" 2>&1 &
+              forward_pid=$!
+              cleanup() {
+                kill "${forward_pid}" >/dev/null 2>&1 || true
+                wait "${forward_pid}" >/dev/null 2>&1 || true
+                rm -f "${log_file}"
+              }
+              trap cleanup EXIT
+              for _ in $(seq 1 30); do
+                if curl --silent --fail http://127.0.0.1:18585/readyz \
+                  >/dev/null; then
+                  exit 0
+                fi
+                sleep 1
+              done
+              exit 1

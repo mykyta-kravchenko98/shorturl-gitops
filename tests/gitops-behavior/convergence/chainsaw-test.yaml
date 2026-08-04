@@ -182,7 +182,9 @@ spec:
                 -o jsonpath='{.metadata.generation}')"
               before_pods="$(kubectl -n shorturl get pods \
                 --selector "${pod_selector}" -o json | jq -r \
-                '[.items[].metadata.uid] | sort | join(",")')"
+                '[.items[]
+                  | select(.metadata.deletionTimestamp == null)
+                  | .metadata.uid] | sort | join(",")')"
               test -n "${before_pods}"
 
               operation_patch="$(jq -cn \
@@ -244,7 +246,9 @@ spec:
                 -o jsonpath='{.metadata.generation}')"
               after_pods="$(kubectl -n shorturl get pods \
                 --selector "${pod_selector}" -o json | jq -r \
-                '[.items[].metadata.uid] | sort | join(",")')"
+                '[.items[]
+                  | select(.metadata.deletionTimestamp == null)
+                  | .metadata.uid] | sort | join(",")')"
 
               test "${after_generation}" = "${before_generation}"
               test "${after_pods}" = "${before_pods}"

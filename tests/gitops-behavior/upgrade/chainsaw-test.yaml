@@ -1,0 +1,125 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: gitops-config-upgrade
+spec:
+  namespace: default
+  steps:
+    - name: ConfigMap revision completes a fresh rollout
+      try:
+        - assert:
+            resource:
+              apiVersion: argoproj.io/v1alpha1
+              kind: Application
+              metadata:
+                name: shorturl
+                namespace: argocd
+              status:
+                sync:
+                  revision: ($values.revision)
+                  status: Synced
+                health:
+                  status: Healthy
+        - assert:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: shorturl
+                namespace: shorturl
+              spec:
+                replicas: 2
+              status:
+                replicas: 2
+                readyReplicas: 2
+                updatedReplicas: 2
+                availableReplicas: 2
+        - assert:
+            resource:
+              apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                name: gitops-smoke-prunable
+                namespace: shorturl
+              data:
+                lifecycle: prune-me
+        - script:
+            shell: bash
+            shellArgs: [-c]
+            timeout: 2m
+            env:
+              - name: PREVIOUS_CHECKSUM
+                value: ($values.previousChecksum)
+              - name: PREVIOUS_PODS
+                value: ($values.previousPods)
+              - name: WORKING_DIGEST
+                value: ($values.workingDigest)
+            content: |
+              set -euo pipefail
+              pod_selector='app.kubernetes.io/name=shorturl,app.kubernetes.io/component=app'
+              expected_image="shorturl-ci@${WORKING_DIGEST}"
+
+              config="$(kubectl -n shorturl get configmap shorturl-config \
+                -o jsonpath='{.data.config\.yml}')"
+              grep -Fq 'mashineId: 2' <<<"${config}"
+
+              deployment_json="$(kubectl -n shorturl get deployment shorturl \
+                -o json)"
+              current_checksum="$(jq -er \
+                '.spec.template.metadata.annotations["checksum/config"]' \
+                <<<"${deployment_json}")"
+              current_image="$(jq -er '
+                .spec.template.spec.containers[]
+                | select(.name == "shorturl").image
+              ' <<<"${deployment_json}")"
+              test "${current_checksum}" != "${PREVIOUS_CHECKSUM}"
+              test "${current_image}" = "${expected_image}"
+
+              for _ in $(seq 1 60); do
+                pods_json="$(kubectl -n shorturl get pods \
+                  --selector "${pod_selector}" -o json)"
+                if jq -e '.items | length == 2' <<<"${pods_json}" >/dev/null; then
+                  replaced=true
+                  IFS=: read -r -a previous_uids <<<"${PREVIOUS_PODS}"
+                  for uid in "${previous_uids[@]}"; do
+                    if jq -e --arg uid "${uid}" '
+                      any(.items[]; .metadata.uid == $uid)
+                    ' <<<"${pods_json}" >/dev/null; then
+                      replaced=false
+                    fi
+                  done
+                  if [[ "${replaced}" == true ]]; then
+                    break
+                  fi
+                fi
+                sleep 1
+              done
+
+              pods_json="$(kubectl -n shorturl get pods \
+                --selector "${pod_selector}" -o json)"
+              jq -e '.items | length == 2' <<<"${pods_json}" >/dev/null
+              IFS=: read -r -a previous_uids <<<"${PREVIOUS_PODS}"
+              for uid in "${previous_uids[@]}"; do
+                jq -e --arg uid "${uid}" '
+                  all(.items[]; .metadata.uid != $uid)
+                ' <<<"${pods_json}" >/dev/null
+              done
+
+              log_file="$(mktemp)"
+              kubectl -n shorturl port-forward service/shorturl 18585:8585 \
+                >"${log_file}" 2>&1 &
+              forward_pid=$!
+              cleanup() {
+                kill "${forward_pid}" >/dev/null 2>&1 || true
+                wait "${forward_pid}" >/dev/null 2>&1 || true
+                rm -f "${log_file}"
+              }
+              trap cleanup EXIT
+              for _ in $(seq 1 30); do
+                if curl --silent --fail http://127.0.0.1:18585/readyz \
+                  >/dev/null; then
+                  exit 0
+                fi
+                sleep 1
+              done
+              exit 1

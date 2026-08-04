@@ -15,17 +15,30 @@ GitOps revisions aligned. Chainsaw writes a JUnit operation report. The
 bootstrap script then verifies Terraform convergence and performs a second
 `terraform apply`.
 
-After the baseline passes, the same cluster exercises a mutable GitOps
-revision. The test creates a temporary branch and exposes its bare repository
-through a short-lived read-only `git daemon`, switches the root Application to
-that branch, commits `replicaCount: 2`, and verifies that Argo CD observes the
-new commit and completes the two-replica rollout. While the mutable revision is
-active, the test patches the live Deployment to three replicas and verifies
-that Argo CD self-heals it back to the two replicas declared by the same Git
-commit. It then restores the root Application to the original URL and SHA
-before checking Terraform convergence. A forced synchronization of the same
-commit must also complete without changing the Deployment generation or
-replacing its Pods, and leave every tracked resource Synced.
+After the baseline passes, the same cluster exercises a mutable sequence of
+GitOps revisions. The test creates a temporary branch and exposes its bare
+repository through a short-lived read-only `git daemon`. The kind-loaded image
+digest is read from containerd and committed with `replicaCount: 2`, proving
+that Argo CD can deploy the locally built image by its immutable digest.
+
+The remaining commits form one lifecycle:
+
+```text
+working digest and two replicas
+  -> ConfigMap input change and rollout
+  -> delete a Git-owned ConfigMap and prune it
+  -> unavailable image digest while old Pods stay Ready
+  -> restore the working digest through Git
+  -> API-rejected ConfigMap and controlled SyncFailed
+  -> remove the broken manifest and recover
+```
+
+While the mutable revision is active, the test also patches the live Deployment
+to three replicas and verifies that Argo CD self-heals it back to the two
+replicas declared by the same Git commit. A forced synchronization of that
+commit must complete without changing the Deployment generation or replacing
+its Pods. Finally, the root Application returns to the original URL and SHA
+before Terraform convergence is checked.
 
 The assertions cover:
 
@@ -44,6 +57,16 @@ The assertions cover:
   to the value from Git without changing the synchronized revision;
 - a forced repeat sync of the same revision completing successfully without a
   resource diff, Deployment spec update, or Pod replacement;
+- a ConfigMap input change producing a new checksum and a complete two-replica
+  rollout while the HTTP readiness endpoint remains available;
+- automated pruning after a test ConfigMap is removed from the next Git
+  revision;
+- an unavailable digest creating a failed surge Pod while `maxUnavailable: 0`
+  preserves both working Pods and HTTP availability;
+- a Git rollback to the previous working digest restoring Healthy convergence
+  without replacing the retained working Pods;
+- an API-rejected manifest producing a `SyncFailed` operation while the current
+  Deployment and HTTP endpoint remain healthy, followed by a recovery commit;
 - an empty convergence plan followed by a second successful Terraform apply.
 
 The `EXIT`, `INT`, and `TERM` handlers always run `terraform destroy`. If destroy
