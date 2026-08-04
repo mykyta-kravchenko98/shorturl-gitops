@@ -137,17 +137,23 @@ spec:
         - script:
             shell: bash
             shellArgs: [-c]
-            timeout: 1m
+            timeout: 3m
             content: |
               set -euo pipefail
-              kubectl -n argocd get application shorturl -o json | jq -e '
-                [.status.operationState.syncResult.resources[]?
-                  | select(
-                      .kind == "Job" and
-                      .name == "postgres-migrate" and
-                      .hookPhase == "Succeeded"
-                    )] | length == 1
-              ' >/dev/null
+              for _ in $(seq 1 60); do
+                if kubectl -n argocd get application shorturl -o json | jq -e '
+                  [.status.operationState.syncResult.resources[]?
+                    | select(
+                        .kind == "Job" and
+                        .name == "postgres-migrate" and
+                        .hookPhase == "Succeeded"
+                      )] | length == 1
+                ' >/dev/null; then
+                  exit 0
+                fi
+                sleep 2
+              done
+              exit 1
         - script:
             shell: bash
             shellArgs: [-c]
