@@ -17,7 +17,8 @@ check-static-tools:
 test-static: check-static-tools test-helm test-kustomize test-kubeconform test-terraform test-policies test-repository
 
 # Requires GITOPS_REPO_URL, TARGET_REVISION and SHORTURL_SOURCE_DIR. Unlike the
-# static gate this creates and always destroys a disposable kind cluster.
+# static gate this creates and always destroys a disposable kind cluster, and
+# exercises a mutable Git revision after the baseline deployment.
 test-deploy-smoke:
 	bash ./scripts/test-deploy-smoke.sh
 

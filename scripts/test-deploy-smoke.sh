@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
-# Full disposable deploy smoke: Terraform -> kind -> Argo CD -> app-of-apps ->
-# workloads -> HTTP. Terraform owns bootstrap and teardown; Chainsaw owns the
-# condition-based Kubernetes and API assertions plus JUnit output.
+# Full disposable deploy and GitOps smoke: Terraform -> kind -> Argo CD ->
+# app-of-apps -> workloads -> HTTP -> mutable Git revision. Terraform owns
+# bootstrap and teardown; Chainsaw owns the condition-based Kubernetes and API
+# assertions plus JUnit output.
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 fixture_dir="${repo_root}/tests/fixtures/terraform-kind"
 test_dir="${repo_root}/tests/deploy-smoke"
+gitops_test_dir="${repo_root}/tests/gitops-behavior"
 report_dir="${DEPLOY_SMOKE_REPORT_DIR:-${repo_root}/test-results/deploy-smoke}"
 cluster_name="${CLUSTER_NAME:-shorturl-smoke}"
 assert_timeout="${DEPLOY_SMOKE_TIMEOUT:-10m}"
@@ -14,6 +16,9 @@ kubeconfig_file=""
 terraform_plan_file=""
 terraform_ready=false
 generated_kubeconfig="${fixture_dir}/${cluster_name}-config"
+
+# shellcheck source=scripts/lib/gitops-test-harness.sh
+source "${repo_root}/scripts/lib/gitops-test-harness.sh"
 
 : "${GITOPS_REPO_URL:?GITOPS_REPO_URL must be the clone URL Argo CD can read}"
 : "${TARGET_REVISION:?TARGET_REVISION must be a commit SHA Argo CD can fetch}"
@@ -24,7 +29,7 @@ if [[ ! "${TARGET_REVISION}" =~ ^[0-9a-fA-F]{40}([0-9a-fA-F]{24})?$ ]]; then
   exit 1
 fi
 
-required_tools=(chainsaw curl docker jq kind kubectl terraform)
+required_tools=(chainsaw curl docker git jq kind kubectl tar terraform)
 missing_tools=()
 for tool in "${required_tools[@]}"; do
   if ! command -v "${tool}" >/dev/null 2>&1; then
@@ -44,6 +49,7 @@ fi
 
 docker info >/dev/null
 chainsaw lint test --file "${test_dir}/chainsaw-test.yaml"
+chainsaw lint test --file "${gitops_test_dir}/chainsaw-test.yaml"
 
 mkdir -p "${report_dir}"
 rm -f "${report_dir}"/*.log "${report_dir}"/*.xml \
@@ -61,6 +67,8 @@ collect_diagnostics() {
     >"${report_dir}/applications.txt" 2>&1 || true
   kubectl --kubeconfig "${kubeconfig_file}" get application shorturl \
     -n argocd -o yaml >"${report_dir}/shorturl-application.yaml" 2>&1 || true
+  kubectl --kubeconfig "${kubeconfig_file}" get application root \
+    -n argocd -o yaml >"${report_dir}/root-application.yaml" 2>&1 || true
   kubectl --kubeconfig "${kubeconfig_file}" get pods,jobs -A -o wide \
     >"${report_dir}/workloads.txt" 2>&1 || true
   kubectl --kubeconfig "${kubeconfig_file}" describe pods -n shorturl \
@@ -113,6 +121,8 @@ teardown() {
     fi
   fi
 
+  gitops_harness_stop
+
   exit "${status}"
 }
 trap teardown EXIT
@@ -149,6 +159,49 @@ chainsaw test "${test_dir}" \
   --report-path "${report_dir}" \
   --set-string "nodeName=${cluster_name}-control-plane" \
   --no-color
+
+printf 'Preparing a disposable Git origin for mutable GitOps revisions...\n'
+gitops_harness_start "${repo_root}" "${TARGET_REVISION}" "${report_dir}"
+gitops_set_root_source "${GITOPS_TEST_REPO_URL}" "${GITOPS_TEST_BRANCH}"
+gitops_wait_application_source shorturl \
+  "${GITOPS_TEST_REPO_URL}" "${GITOPS_TEST_BRANCH}"
+gitops_wait_application_revision root "${GITOPS_TEST_REVISION}"
+gitops_wait_application_revision shorturl "${GITOPS_TEST_REVISION}"
+
+printf 'Committing a replica upgrade to the disposable Git branch...\n'
+values_file="${GITOPS_TEST_WORKTREE}/helm/shorturl/values-ci.yaml"
+sed -i.bak 's/^replicaCount: 1$/replicaCount: 2/' "${values_file}"
+rm -f "${values_file}.bak"
+if ! grep -Fxq 'replicaCount: 2' "${values_file}"; then
+  printf 'Could not set the GitOps test replicaCount to 2.\n' >&2
+  exit 1
+fi
+gitops_harness_commit "Test GitOps replica upgrade"
+gitops_refresh_application root
+gitops_refresh_application shorturl
+
+chainsaw test "${gitops_test_dir}" \
+  --assert-timeout "${assert_timeout}" \
+  --report-format JUNIT-OPERATION \
+  --report-name gitops-chainsaw-junit \
+  --report-path "${report_dir}" \
+  --set-string "revision=${GITOPS_TEST_REVISION}" \
+  --no-color
+
+# Restore Terraform's declared root source before checking its convergence.
+printf 'Restoring the root Application to the pinned source revision...\n'
+gitops_set_root_source "${GITOPS_REPO_URL}" "${TARGET_REVISION}"
+gitops_wait_application_source shorturl \
+  "${GITOPS_REPO_URL}" "${TARGET_REVISION}"
+gitops_wait_application_revision root "${TARGET_REVISION}"
+gitops_wait_application_revision shorturl "${TARGET_REVISION}"
+kubectl -n shorturl rollout status deployment/shorturl --timeout=3m
+if [[ "$(kubectl -n shorturl get deployment shorturl \
+    -o jsonpath='{.spec.replicas}')" != "1" ]]; then
+  printf 'ShortUrl did not return to the pinned replica count.\n' >&2
+  exit 1
+fi
+gitops_harness_stop
 
 printf 'Checking Terraform convergence before the required second apply...\n'
 set +e

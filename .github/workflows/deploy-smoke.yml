@@ -1,4 +1,4 @@
-name: Basic deploy smoke
+name: Deploy and GitOps smoke
 
 on:
   pull_request:
@@ -12,7 +12,7 @@ concurrency:
 jobs:
   deploy-smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 45
     permissions:
       contents: read
     steps:
@@ -77,7 +77,7 @@ jobs:
           printf 'repo_url=%s\n' "${repo_url}" >> "${GITHUB_OUTPUT}"
           printf 'revision=%s\n' "${revision}" >> "${GITHUB_OUTPUT}"
 
-      - name: Run Terraform, Argo CD and HTTP smoke
+      - name: Run deployment and mutable GitOps smoke
         env:
           GITOPS_REPO_URL: ${{ steps.source.outputs.repo_url }}
           TARGET_REVISION: ${{ steps.source.outputs.revision }}
