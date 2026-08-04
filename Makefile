@@ -1,4 +1,4 @@
-.PHONY: up down argocd-ui lint check-static-tools test-static test-helm test-kustomize test-kubeconform test-terraform test-policies update-kubeconform-schemas
+.PHONY: up down argocd-ui lint check-static-tools test-static test-helm test-kustomize test-kubeconform test-terraform test-policies test-repository update-kubeconform-schemas
 
 up:
 	./scripts/up.sh
@@ -14,7 +14,7 @@ check-static-tools:
 
 # Aggregate only implemented checks. New static groups are added here as
 # their real recipes land; no placeholder target may pass silently.
-test-static: check-static-tools test-helm test-kustomize test-kubeconform test-terraform test-policies
+test-static: check-static-tools test-helm test-kustomize test-kubeconform test-terraform test-policies test-repository
 
 test-helm:
 	helm lint --strict helm/shorturl
@@ -33,6 +33,9 @@ test-terraform:
 
 test-policies:
 	bash ./scripts/test-policies.sh
+
+test-repository:
+	bash ./scripts/test-repository.sh
 
 # Maintenance command: downloads pinned CRDs/converter and updates vendored
 # schemas. It is deliberately not part of test-static because it mutates files.
