@@ -16,9 +16,11 @@ check-static-tools:
 # their real recipes land; no placeholder target may pass silently.
 test-static: check-static-tools test-helm test-kustomize test-kubeconform test-terraform test-policies test-repository
 
-# Requires GITOPS_REPO_URL, TARGET_REVISION and SHORTURL_SOURCE_DIR. Unlike the
-# static gate this creates and always destroys a disposable kind cluster, and
-# exercises a mutable Git revision after the baseline deployment.
+# Requires GITOPS_REPO_URL, TARGET_REVISION and SHORTURL_SOURCE_DIR. Controller
+# sources default to sibling checkouts and can be overridden with
+# KURAMA_SOURCE_DIR and AMENOTEJIKARA_SOURCE_DIR. Unlike the static gate this
+# creates and always destroys a disposable kind cluster, and exercises mutable
+# Git revisions after the baseline deployment.
 test-deploy-smoke:
 	bash ./scripts/test-deploy-smoke.sh
 

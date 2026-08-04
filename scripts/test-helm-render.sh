@@ -75,4 +75,22 @@ if [[ ! -s "${render_dir}/app-of-apps.yaml" ]]; then
   exit 1
 fi
 
+printf 'Rendering app-of-apps controller CI profile\n'
+helm template root "${app_of_apps_chart}" \
+  --namespace argocd \
+  --kube-version "${KUBERNETES_VERSION}" \
+  --set ci.enabled=true \
+  --set ci.controllersEnabled=true \
+  >"${render_dir}/app-of-apps-controller-ci.yaml"
+controller_ci_apps="$(awk '
+  $1 == "kind:" && $2 == "Application" { application = 1; next }
+  application && $1 == "name:" { print $2; application = 0 }
+' "${render_dir}/app-of-apps-controller-ci.yaml" | sort | paste -sd, -)"
+if [[ "${controller_ci_apps}" != \
+    "amenotejikara,kurama,namespaces,shorturl" ]]; then
+  printf 'Unexpected controller CI Applications: %s\n' \
+    "${controller_ci_apps}" >&2
+  exit 1
+fi
+
 printf 'Helm render matrix passed.\n'

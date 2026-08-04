@@ -10,9 +10,11 @@ digest so local and CI runs use the same control-plane version.
 
 Both source variables are intentionally required so CI cannot silently test
 `main` instead of the requested commit. The fixture selects the ShortURL
-`values-ci.yaml` overlay through the app-of-apps chart. CI mode renders only
-the `namespaces` and `shorturl` child Applications; controllers and the
-observability stack remain part of the default local profile.
+`values-ci.yaml` overlay through the app-of-apps chart. Baseline CI mode renders
+only the `namespaces` and `shorturl` child Applications. The mutable GitOps
+lifecycle later opts Kurama and Amenotejikara in with locally built images;
+Redis and the observability stack remain excluded from the disposable test
+environment.
 
 ```bash
 terraform init
