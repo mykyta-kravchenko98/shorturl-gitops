@@ -13,6 +13,7 @@ assert_timeout="${DEPLOY_SMOKE_TIMEOUT:-10m}"
 kubeconfig_file=""
 terraform_plan_file=""
 terraform_ready=false
+generated_kubeconfig="${fixture_dir}/${cluster_name}-config"
 
 : "${GITOPS_REPO_URL:?GITOPS_REPO_URL must be the clone URL Argo CD can read}"
 : "${TARGET_REVISION:?TARGET_REVISION must be a commit SHA Argo CD can fetch}"
@@ -42,7 +43,7 @@ if [[ ! -f "${SHORTURL_SOURCE_DIR}/Dockerfile" || \
 fi
 
 docker info >/dev/null
-chainsaw lint "${test_dir}/chainsaw-test.yaml"
+chainsaw lint test --file "${test_dir}/chainsaw-test.yaml"
 
 mkdir -p "${report_dir}"
 rm -f "${report_dir}"/*.log "${report_dir}"/*.xml \
@@ -62,6 +63,25 @@ collect_diagnostics() {
     -n argocd -o yaml >"${report_dir}/shorturl-application.yaml" 2>&1 || true
   kubectl --kubeconfig "${kubeconfig_file}" get pods,jobs -A -o wide \
     >"${report_dir}/workloads.txt" 2>&1 || true
+  kubectl --kubeconfig "${kubeconfig_file}" describe pods -n shorturl \
+    >"${report_dir}/shorturl-pods-describe.txt" 2>&1 || true
+  : >"${report_dir}/shorturl-pod-logs.txt"
+  while read -r pod_name; do
+    [[ -n "${pod_name}" ]] || continue
+    printf '\n===== %s: current logs =====\n' "${pod_name}" \
+      >>"${report_dir}/shorturl-pod-logs.txt"
+    kubectl --kubeconfig "${kubeconfig_file}" logs -n shorturl \
+      "${pod_name}" --all-containers --prefix \
+      >>"${report_dir}/shorturl-pod-logs.txt" 2>&1 || true
+    printf '\n===== %s: previous logs =====\n' "${pod_name}" \
+      >>"${report_dir}/shorturl-pod-logs.txt"
+    kubectl --kubeconfig "${kubeconfig_file}" logs -n shorturl \
+      "${pod_name}" --all-containers --prefix --previous \
+      >>"${report_dir}/shorturl-pod-logs.txt" 2>&1 || true
+  done < <(
+    kubectl --kubeconfig "${kubeconfig_file}" get pods -n shorturl \
+      -o name 2>/dev/null
+  )
   kubectl --kubeconfig "${kubeconfig_file}" get events -A --sort-by=.lastTimestamp \
     >"${report_dir}/events.txt" 2>&1 || true
 }
@@ -72,7 +92,8 @@ teardown() {
   set +e
 
   collect_diagnostics
-  rm -f "${kubeconfig_file}" "${terraform_plan_file}"
+  rm -f "${kubeconfig_file}" "${terraform_plan_file}" \
+    "${generated_kubeconfig}"
 
   if [[ "${terraform_ready}" == true ]]; then
     terraform -chdir="${fixture_dir}" destroy -auto-approve -input=false \
