@@ -1,4 +1,4 @@
-.PHONY: up down argocd-ui lint check-static-tools test-static test-helm test-kustomize test-kubeconform test-terraform test-policies test-repository update-kubeconform-schemas
+.PHONY: up down argocd-ui lint check-static-tools test-static test-deploy-smoke test-helm test-kustomize test-kubeconform test-terraform test-policies test-repository update-kubeconform-schemas
 
 up:
 	./scripts/up.sh
@@ -15,6 +15,11 @@ check-static-tools:
 # Aggregate only implemented checks. New static groups are added here as
 # their real recipes land; no placeholder target may pass silently.
 test-static: check-static-tools test-helm test-kustomize test-kubeconform test-terraform test-policies test-repository
+
+# Requires GITOPS_REPO_URL, TARGET_REVISION and SHORTURL_SOURCE_DIR. Unlike the
+# static gate this creates and always destroys a disposable kind cluster.
+test-deploy-smoke:
+	bash ./scripts/test-deploy-smoke.sh
 
 test-helm:
 	helm lint --strict helm/shorturl

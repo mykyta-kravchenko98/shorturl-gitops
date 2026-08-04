@@ -1,0 +1,97 @@
+name: Basic deploy smoke
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    permissions:
+      contents: read
+    steps:
+      - name: Check out GitOps revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Resolve pinned ShortUrl source revision
+        id: app_version
+        run: |
+          revision="$(awk '$1 == "imageVersion:" { gsub(/\"/, "", $2); print $2 }' \
+            helm/shorturl/values.yaml)"
+          [[ "${revision}" =~ ^[0-9a-fA-F]{40}([0-9a-fA-F]{24})?$ ]]
+          printf 'revision=%s\n' "${revision}" >> "${GITHUB_OUTPUT}"
+
+      - name: Check out ShortUrl application
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: mykyta-kravchenko98/ShortUrl
+          ref: ${{ steps.app_version.outputs.revision }}
+          path: shorturl-app
+          persist-credentials: false
+
+      - name: Read pinned installer version
+        id: deploy_versions
+        run: |
+          mise_version="$(awk -F= '$1 == "MISE_VERSION" { print $2 }' tools/static-versions.env)"
+          test -n "${mise_version}"
+          printf 'mise=%s\n' "${mise_version}" >> "${GITHUB_OUTPUT}"
+
+      - name: Install mise
+        uses: jdx/mise-action@5228313ee0372e111a38da051671ca30fc5a96db # v3
+        with:
+          version: ${{ steps.deploy_versions.outputs.mise }}
+          install: false
+          cache: false
+
+      - name: Install pinned deploy-smoke tools
+        run: bash ./scripts/install-deploy-tools-ci.sh
+
+      - name: Resolve Argo CD source revision
+        id: source
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.clone_url }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          REPOSITORY: ${{ github.repository }}
+          SERVER_URL: ${{ github.server_url }}
+          WORKFLOW_SHA: ${{ github.sha }}
+        run: |
+          if [[ "${EVENT_NAME}" == "pull_request" ]]; then
+            repo_url="${HEAD_REPOSITORY}"
+            revision="${HEAD_SHA}"
+          else
+            repo_url="${SERVER_URL}/${REPOSITORY}.git"
+            revision="${WORKFLOW_SHA}"
+          fi
+          test -n "${repo_url}"
+          test -n "${revision}"
+          printf 'repo_url=%s\n' "${repo_url}" >> "${GITHUB_OUTPUT}"
+          printf 'revision=%s\n' "${revision}" >> "${GITHUB_OUTPUT}"
+
+      - name: Run Terraform, Argo CD and HTTP smoke
+        env:
+          GITOPS_REPO_URL: ${{ steps.source.outputs.repo_url }}
+          TARGET_REVISION: ${{ steps.source.outputs.revision }}
+          SHORTURL_SOURCE_DIR: ${{ github.workspace }}/shorturl-app
+          DEPLOY_SMOKE_REPORT_DIR: ${{ github.workspace }}/test-results/deploy-smoke
+          DEPLOY_SMOKE_TIMEOUT: 10m
+          CLUSTER_NAME: shorturl-smoke
+        run: make test-deploy-smoke
+
+      - name: Upload smoke reports and diagnostics
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: deploy-smoke-reports
+          path: test-results/deploy-smoke
+          if-no-files-found: warn
+          retention-days: 14

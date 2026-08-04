@@ -55,3 +55,15 @@ variable "api_server_address" {
   type        = string
   default     = "127.0.0.1"
 }
+
+variable "http_host_port" {
+  description = "Host port mapped to port 80 on the kind control-plane node"
+  type        = number
+  default     = 8080
+}
+
+variable "https_host_port" {
+  description = "Host port mapped to port 443 on the kind control-plane node"
+  type        = number
+  default     = 8443
+}

@@ -46,11 +46,11 @@ resource "kind_cluster" "this" {
       # extra port-forwarding.
       extra_port_mappings {
         container_port = 80
-        host_port      = 8080
+        host_port      = var.http_host_port
       }
       extra_port_mappings {
         container_port = 443
-        host_port      = 8443
+        host_port      = var.https_host_port
       }
     }
 

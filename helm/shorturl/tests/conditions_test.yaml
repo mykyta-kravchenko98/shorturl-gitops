@@ -70,3 +70,12 @@ tests:
       - isKind:
           of: StatefulSet
         template: templates/postgres-statefulset.yaml
+      - equal:
+          path: spec.template.spec.containers[0].env[0]
+          value:
+            name: PGDATA
+            value: /var/lib/postgresql/data/pgdata
+        template: templates/postgres-statefulset.yaml
+      - notExists:
+          path: spec.template.spec.containers[0].volumeMounts[0].subPath
+        template: templates/postgres-statefulset.yaml

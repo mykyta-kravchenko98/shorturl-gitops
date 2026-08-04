@@ -14,3 +14,15 @@ variable "target_revision" {
   type        = string
 }
 
+variable "http_host_port" {
+  description = "Disposable cluster host port mapped to HTTP"
+  type        = number
+  default     = 28080
+}
+
+variable "https_host_port" {
+  description = "Disposable cluster host port mapped to HTTPS"
+  type        = number
+  default     = 28443
+}
+

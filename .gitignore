@@ -11,3 +11,6 @@ controller/hack/certs/
 /.idea/vcs.xml
 
 terraform/envs/local/shorturl-config
+
+# JUnit, Terraform logs and Kubernetes diagnostics from the deploy smoke.
+/test-results/
