@@ -14,6 +14,7 @@ metadata:
     "helm.sh/hook-weight": "-10"
     "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
 spec:
+  activeDeadlineSeconds: {{ .Values.ecrRefresh.activeDeadlineSeconds }}
   backoffLimit: 3
   template:
     metadata:

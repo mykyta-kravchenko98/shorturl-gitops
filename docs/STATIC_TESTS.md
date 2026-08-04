@@ -76,7 +76,9 @@ namespaces for namespaced resources and RBAC subjects, and validates workload
 and Service selectors. Every container and init container must define CPU and
 memory requests and limits, run as non-root, use an enabled seccomp profile,
 and drop all Linux capabilities. Every long-lived workload container must also
-define liveness and readiness probes. The disposable CI image fixture is the
+define liveness and readiness probes. Git-based Argo Applications must use one
+revision, every Helm hook must declare a deletion policy, and hook Jobs must
+have a positive execution deadline. The disposable CI image fixture is the
 only exception to production digest pinning; `latest` remains forbidden there
 as well.
 
