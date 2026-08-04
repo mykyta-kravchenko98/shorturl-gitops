@@ -36,11 +36,28 @@ spec:
               containerPort: 4318
             - name: metrics
               containerPort: 8888
+            - name: health
+              containerPort: 13133
+          livenessProbe:
+            httpGet:
+              path: /
+              port: health
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /
+              port: health
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 3
           resources:
             requests:
               cpu: 50m
               memory: 128Mi
             limits:
+              cpu: 500m
               memory: 256Mi
           volumeMounts:
             - name: config
