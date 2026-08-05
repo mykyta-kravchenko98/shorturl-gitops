@@ -424,11 +424,26 @@ sed -i.bak 's/^  replicas: 2$/  replicas: 1/' \
   "${kurama_scenario_file}"
 sed -i.bak '0,/^    type: redis$/s//    type: memory/' \
   "${kurama_scenario_file}"
+sed -i.bak '0,/^      type: uniform$/s//      type: fixed/' \
+  "${kurama_scenario_file}"
+sed -i.bak \
+  's/^      minRequestsPerMinute: 2$/      requestsPerMinute: 30/' \
+  "${kurama_scenario_file}"
+sed -i.bak -E \
+  '/^      (maxRequestsPerMinute|windowMinutes):/d' \
+  "${kurama_scenario_file}"
 sed -i.bak '0,/^      type: redis$/s//      type: local/' \
   "${kurama_scenario_file}"
 rm -f "${kurama_scenario_file}.bak"
 grep -Fxq '  replicas: 1' "${kurama_scenario_file}"
 grep -Fxq '    type: memory' "${kurama_scenario_file}"
+grep -Fxq '      type: fixed' "${kurama_scenario_file}"
+grep -Fxq '      requestsPerMinute: 30' "${kurama_scenario_file}"
+if grep -Eq '^      (minRequestsPerMinute|maxRequestsPerMinute|windowMinutes):' \
+    "${kurama_scenario_file}"; then
+  printf 'Could not prepare the Kurama fixed schedule for kind.\n' >&2
+  exit 1
+fi
 grep -Fxq '      type: local' "${kurama_scenario_file}"
 
 gitops_harness_commit "Install controllers for restart lifecycle test"
@@ -446,6 +461,8 @@ grep -Fxq '    enabled: true' "${values_file}"
 grep -Fxq '    pendingSecretName: postgres-credentials' "${values_file}"
 gitops_harness_commit "Create controller restart lifecycle CRs"
 refresh_gitops_apps
+gitops_refresh_application kurama
+gitops_refresh_application amenotejikara
 run_gitops_test "${gitops_controller_restart_test_dir}" \
   gitops-controller-restart-junit \
   "revision=${GITOPS_TEST_REVISION}"
