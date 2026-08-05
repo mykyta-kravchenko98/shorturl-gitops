@@ -12,7 +12,7 @@ concurrency:
 jobs:
   deploy-smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 75
     permissions:
       contents: read
     steps:
@@ -36,6 +36,36 @@ jobs:
           repository: mykyta-kravchenko98/ShortUrl
           ref: ${{ steps.app_version.outputs.revision }}
           path: shorturl-app
+          persist-credentials: false
+
+      - name: Read pinned controller revisions
+        id: controller_versions
+        run: |
+          kurama_revision="$(awk -F= '$1 == "KURAMA_SOURCE_REVISION" { print $2 }' \
+            tools/static-versions.env)"
+          amenotejikara_revision="$(awk -F= \
+            '$1 == "AMENOTEJIKARA_SOURCE_REVISION" { print $2 }' \
+            tools/static-versions.env)"
+          [[ "${kurama_revision}" =~ ^[0-9a-f]{40}$ ]]
+          [[ "${amenotejikara_revision}" =~ ^[0-9a-f]{40}$ ]]
+          printf 'kurama=%s\n' "${kurama_revision}" >> "${GITHUB_OUTPUT}"
+          printf 'amenotejikara=%s\n' "${amenotejikara_revision}" \
+            >> "${GITHUB_OUTPUT}"
+
+      - name: Check out Kurama controller
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: mykyta-kravchenko98/Kurama
+          ref: ${{ steps.controller_versions.outputs.kurama }}
+          path: kurama-controller
+          persist-credentials: false
+
+      - name: Check out Amenotejikara controller
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: mykyta-kravchenko98/Amenotejikara
+          ref: ${{ steps.controller_versions.outputs.amenotejikara }}
+          path: amenotejikara-controller
           persist-credentials: false
 
       - name: Read pinned installer version
@@ -82,6 +112,8 @@ jobs:
           GITOPS_REPO_URL: ${{ steps.source.outputs.repo_url }}
           TARGET_REVISION: ${{ steps.source.outputs.revision }}
           SHORTURL_SOURCE_DIR: ${{ github.workspace }}/shorturl-app
+          KURAMA_SOURCE_DIR: ${{ github.workspace }}/kurama-controller
+          AMENOTEJIKARA_SOURCE_DIR: ${{ github.workspace }}/amenotejikara-controller
           DEPLOY_SMOKE_REPORT_DIR: ${{ github.workspace }}/test-results/deploy-smoke
           DEPLOY_SMOKE_TIMEOUT: 10m
           CLUSTER_NAME: shorturl-smoke

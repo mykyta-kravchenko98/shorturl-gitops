@@ -1,0 +1,191 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: gitops-controller-restart
+spec:
+  namespace: default
+  steps:
+    - name: controller restarts preserve CR and workload state
+      try:
+        - script:
+            shell: bash
+            shellArgs: [-c]
+            timeout: 8m
+            env:
+              - name: EXPECTED_REVISION
+                value: ($values.revision)
+            content: |
+              set -euo pipefail
+              namespace=shorturl
+              kurama_selector='app.kubernetes.io/name=kurama,app.kubernetes.io/component=manager'
+              amenotejikara_selector='app.kubernetes.io/name=amenotejikara,app.kubernetes.io/component=manager'
+
+              dump_controller_state() {
+                printf '\n===== controller restart diagnostic =====\n' >&2
+                kubectl -n argocd get application/root \
+                  application/shorturl application/kurama \
+                  application/amenotejikara \
+                  -o 'custom-columns=NAME:.metadata.name,REVISION:.status.sync.revision,SYNC:.status.sync.status,HEALTH:.status.health.status' \
+                  >&2 || true
+                kubectl -n "${namespace}" get trafficscenario shorturl \
+                  -o yaml >&2 || true
+                kubectl -n "${namespace}" get credentialrotation \
+                  shorturl-postgres -o yaml >&2 || true
+                kubectl -n "${namespace}" get deployments,pods -o wide \
+                  >&2 || true
+                kubectl -n "${namespace}" get events \
+                  --sort-by=.lastTimestamp >&2 || true
+              }
+              trap dump_controller_state ERR
+
+              application_is_healthy() {
+                local application="$1"
+                kubectl -n argocd get application "${application}" -o json | \
+                  jq -e --arg revision "${EXPECTED_REVISION}" '
+                    .status.sync.revision == $revision and
+                    .status.sync.status == "Synced" and
+                    .status.health.status == "Healthy"
+                  ' >/dev/null
+              }
+
+              controller_pod_uid() {
+                local selector="$1"
+                kubectl -n "${namespace}" get pods --selector "${selector}" \
+                  -o json | jq -er '
+                    [
+                      .items[]
+                      | select(
+                          .metadata.deletionTimestamp == null and
+                          any(.status.conditions[]?;
+                            .type == "Ready" and .status == "True")
+                        )
+                    ]
+                    | select(length == 1)
+                    | .[0].metadata.uid
+                  '
+              }
+
+              cr_snapshot() {
+                local resource="$1"
+                local name="$2"
+                kubectl -n "${namespace}" get "${resource}" "${name}" \
+                  -o json | jq -cS '{
+                    uid: .metadata.uid,
+                    generation: .metadata.generation,
+                    spec: .spec,
+                    status: .status
+                  }'
+              }
+
+              # The app-of-apps parent can remain Progressing while child
+              # Application health propagates. The restart contract concerns
+              # the three directly affected child Applications and their CRs.
+              controllers_converged=false
+              for _ in $(seq 1 240); do
+                if application_is_healthy shorturl && \
+                    application_is_healthy kurama && \
+                    application_is_healthy amenotejikara && \
+                    kubectl -n "${namespace}" get trafficscenario shorturl \
+                      -o json | jq -e '
+                        .spec.suspend == true and
+                        .status.phase == "Suspended" and
+                        .status.observedGeneration == .metadata.generation
+                      ' >/dev/null && \
+                    kubectl -n "${namespace}" get credentialrotation \
+                      shorturl-postgres -o json | jq -e '
+                        .status.phase == "InSync" and
+                        .status.observedGeneration == .metadata.generation
+                      ' >/dev/null && \
+                    ! kubectl -n "${namespace}" get deployment \
+                      shorturl-runner >/dev/null 2>&1 && \
+                    controller_pod_uid "${kurama_selector}" >/dev/null && \
+                    controller_pod_uid "${amenotejikara_selector}" \
+                      >/dev/null; then
+                  controllers_converged=true
+                  break
+                fi
+                sleep 1
+              done
+              [[ "${controllers_converged}" == true ]]
+
+              kurama_cr_before="$(cr_snapshot trafficscenario shorturl)"
+              amenotejikara_cr_before="$(cr_snapshot credentialrotation \
+                shorturl-postgres)"
+              kurama_controller_before="$(controller_pod_uid \
+                "${kurama_selector}")"
+              amenotejikara_controller_before="$(controller_pod_uid \
+                "${amenotejikara_selector}")"
+              shorturl_deployment_uid="$(kubectl -n "${namespace}" get \
+                deployment shorturl -o jsonpath='{.metadata.uid}')"
+
+              kubectl -n "${namespace}" delete pod \
+                --selector "${kurama_selector}" --wait=false >/dev/null
+              kubectl -n "${namespace}" delete pod \
+                --selector "${amenotejikara_selector}" --wait=false \
+                >/dev/null
+
+              restarted=false
+              for _ in $(seq 1 240); do
+                kurama_controller_after="$(controller_pod_uid \
+                  "${kurama_selector}" 2>/dev/null || true)"
+                amenotejikara_controller_after="$(controller_pod_uid \
+                  "${amenotejikara_selector}" 2>/dev/null || true)"
+                if [[ -n "${kurama_controller_after}" &&
+                      "${kurama_controller_after}" != \
+                        "${kurama_controller_before}" &&
+                      -n "${amenotejikara_controller_after}" &&
+                      "${amenotejikara_controller_after}" != \
+                        "${amenotejikara_controller_before}" ]]; then
+                  restarted=true
+                  break
+                fi
+                sleep 1
+              done
+              [[ "${restarted}" == true ]]
+
+              state_preserved=false
+              for _ in $(seq 1 120); do
+                kurama_cr_after="$(cr_snapshot trafficscenario shorturl)"
+                amenotejikara_cr_after="$(cr_snapshot credentialrotation \
+                  shorturl-postgres)"
+                if [[ "${kurama_cr_after}" == "${kurama_cr_before}" &&
+                      "${amenotejikara_cr_after}" == \
+                        "${amenotejikara_cr_before}" &&
+                      "$(kubectl -n "${namespace}" get deployment shorturl \
+                        -o jsonpath='{.metadata.uid}')" == \
+                        "${shorturl_deployment_uid}" ]] && \
+                    ! kubectl -n "${namespace}" get deployment \
+                      shorturl-runner >/dev/null 2>&1 && \
+                    kubectl -n "${namespace}" get deployment shorturl \
+                      -o json | jq -e '
+                        .status.readyReplicas == 2 and
+                        .status.availableReplicas == 2
+                      ' >/dev/null && \
+                    application_is_healthy kurama && \
+                    application_is_healthy amenotejikara && \
+                    application_is_healthy shorturl; then
+                  state_preserved=true
+                  break
+                fi
+                sleep 1
+              done
+              [[ "${state_preserved}" == true ]]
+
+              log_file="$(mktemp)"
+              kubectl -n "${namespace}" port-forward service/shorturl \
+                18585:8585 >"${log_file}" 2>&1 &
+              forward_pid=$!
+              cleanup() {
+                kill "${forward_pid}" >/dev/null 2>&1 || true
+                wait "${forward_pid}" >/dev/null 2>&1 || true
+                rm -f "${log_file}"
+              }
+              trap cleanup EXIT
+              for _ in $(seq 1 30); do
+                if curl --silent --fail http://127.0.0.1:18585/readyz \
+                  >/dev/null; then
+                  exit 0
+                fi
+                sleep 1
+              done
+              exit 1

@@ -15,6 +15,7 @@ gitops_prune_test_dir="${gitops_test_dir}/prune"
 gitops_broken_image_test_dir="${gitops_test_dir}/broken-image"
 gitops_recovery_test_dir="${gitops_test_dir}/recovery"
 gitops_broken_manifest_test_dir="${gitops_test_dir}/broken-manifest"
+gitops_controller_restart_test_dir="${gitops_test_dir}/controller-restart"
 report_dir="${DEPLOY_SMOKE_REPORT_DIR:-${repo_root}/test-results/deploy-smoke}"
 cluster_name="${CLUSTER_NAME:-shorturl-smoke}"
 assert_timeout="${DEPLOY_SMOKE_TIMEOUT:-10m}"
@@ -68,6 +69,8 @@ shorturl_pod_uids() {
 : "${GITOPS_REPO_URL:?GITOPS_REPO_URL must be the clone URL Argo CD can read}"
 : "${TARGET_REVISION:?TARGET_REVISION must be a commit SHA Argo CD can fetch}"
 : "${SHORTURL_SOURCE_DIR:?SHORTURL_SOURCE_DIR must point to the ShortUrl source checkout}"
+KURAMA_SOURCE_DIR="${KURAMA_SOURCE_DIR:-${repo_root}/../Kurama}"
+AMENOTEJIKARA_SOURCE_DIR="${AMENOTEJIKARA_SOURCE_DIR:-${repo_root}/../Amenotejikara}"
 
 if [[ ! "${TARGET_REVISION}" =~ ^[0-9a-fA-F]{40}([0-9a-fA-F]{24})?$ ]]; then
   printf 'TARGET_REVISION must be a complete 40- or 64-character commit SHA.\n' >&2
@@ -91,6 +94,16 @@ if [[ ! -f "${SHORTURL_SOURCE_DIR}/Dockerfile" || \
   printf 'ShortUrl Dockerfiles were not found under %s\n' "${SHORTURL_SOURCE_DIR}" >&2
   exit 1
 fi
+if [[ ! -f "${KURAMA_SOURCE_DIR}/Dockerfile" ]]; then
+  printf 'Kurama Dockerfile was not found under %s\n' \
+    "${KURAMA_SOURCE_DIR}" >&2
+  exit 1
+fi
+if [[ ! -f "${AMENOTEJIKARA_SOURCE_DIR}/Dockerfile" ]]; then
+  printf 'Amenotejikara Dockerfile was not found under %s\n' \
+    "${AMENOTEJIKARA_SOURCE_DIR}" >&2
+  exit 1
+fi
 
 docker info >/dev/null
 chainsaw lint test --file "${test_dir}/chainsaw-test.yaml"
@@ -102,6 +115,8 @@ chainsaw lint test --file \
 chainsaw lint test --file "${gitops_recovery_test_dir}/chainsaw-test.yaml"
 chainsaw lint test --file \
   "${gitops_broken_manifest_test_dir}/chainsaw-test.yaml"
+chainsaw lint test --file \
+  "${gitops_controller_restart_test_dir}/chainsaw-test.yaml"
 
 mkdir -p "${report_dir}"
 rm -f "${report_dir}"/*.log "${report_dir}"/*.xml \
@@ -124,6 +139,9 @@ collect_diagnostics() {
   kubectl --kubeconfig "${kubeconfig_file}" get \
     deployments,replicasets,statefulsets,pods,jobs -A -o wide \
     >"${report_dir}/workloads.txt" 2>&1 || true
+  kubectl --kubeconfig "${kubeconfig_file}" get \
+    trafficscenarios.traffic.kurama.dev,credentialrotations.ops.amenotejikara.dev \
+    -A -o yaml >"${report_dir}/controller-crs.yaml" 2>&1 || true
   kubectl --kubeconfig "${kubeconfig_file}" describe pods -n shorturl \
     >"${report_dir}/shorturl-pods-describe.txt" 2>&1 || true
   : >"${report_dir}/shorturl-pod-logs.txt"
@@ -186,6 +204,9 @@ printf 'Building disposable ShortUrl images...\n'
 docker build --tag shorturl-ci:test "${SHORTURL_SOURCE_DIR}"
 docker build --file "${SHORTURL_SOURCE_DIR}/Dockerfile.migrate" \
   --tag shorturl-migrate-ci:test "${SHORTURL_SOURCE_DIR}"
+printf 'Building disposable controller images...\n'
+docker build --tag kurama-ci:test "${KURAMA_SOURCE_DIR}"
+docker build --tag amenotejikara-ci:test "${AMENOTEJIKARA_SOURCE_DIR}"
 
 printf 'Applying Terraform fixture for cluster %s...\n' "${cluster_name}"
 terraform -chdir="${fixture_dir}" init -input=false
@@ -203,6 +224,8 @@ export KUBECONFIG="${kubeconfig_file}"
 # Never-pull images immediately; kubelet retries any pod scheduled meanwhile.
 kind load docker-image --name "${cluster_name}" shorturl-ci:test
 kind load docker-image --name "${cluster_name}" shorturl-migrate-ci:test
+kind load docker-image --name "${cluster_name}" kurama-ci:test
+kind load docker-image --name "${cluster_name}" amenotejikara-ci:test
 
 # Locally built images have no registry-provided repoDigest. Read the imported
 # manifest digest from containerd and add an explicit digest reference so CRI
@@ -345,6 +368,107 @@ run_gitops_test "${gitops_recovery_test_dir}" \
   "workingDigest=${working_image_digest}" \
   "retainedPods=${stable_pods}"
 gitops_wait_application_revision root "${GITOPS_TEST_REVISION}"
+
+printf 'Installing locally built controllers from a Git revision...\n'
+app_values_file="${GITOPS_TEST_WORKTREE}/helm/app-of-apps/values.yaml"
+kurama_deployment_file="${GITOPS_TEST_WORKTREE}/k8s/kurama/deployment.yaml"
+kurama_scenario_file="${GITOPS_TEST_WORKTREE}/k8s/kurama/shorturl-scenario.yaml"
+amenotejikara_deployment_file="${GITOPS_TEST_WORKTREE}/k8s/amenotejikara/deployment.yaml"
+
+sed -i.bak \
+  's/^  controllersEnabled: false$/  controllersEnabled: true/' \
+  "${app_values_file}"
+rm -f "${app_values_file}.bak"
+grep -Fxq '  controllersEnabled: true' "${app_values_file}"
+
+sed -i.bak -E \
+  's#528081867341\.dkr\.ecr\.eu-central-1\.amazonaws\.com/kurama@sha256:[0-9a-f]{64}#kurama-ci:test#g' \
+  "${kurama_deployment_file}"
+sed -i.bak 's/imagePullPolicy: IfNotPresent/imagePullPolicy: Never/' \
+  "${kurama_deployment_file}"
+sed -i.bak \
+  '/^      imagePullSecrets:$/,/^      containers:$/ { /^      containers:$/!d; }' \
+  "${kurama_deployment_file}"
+sed -i.bak \
+  '/KURAMA_RUNNER_IMAGE_PULL_SECRET/!b;n;s/value: ecr-pull-secret/value: ""/' \
+  "${kurama_deployment_file}"
+rm -f "${kurama_deployment_file}.bak"
+if [[ "$(grep -Fc 'kurama-ci:test' "${kurama_deployment_file}")" != "2" ]] || \
+    ! grep -Fq 'imagePullPolicy: Never' "${kurama_deployment_file}" || \
+    ! grep -Fq 'value: ""' "${kurama_deployment_file}" || \
+    grep -Fq 'imagePullSecrets:' "${kurama_deployment_file}"; then
+  printf 'Could not prepare the Kurama controller manifest for kind.\n' >&2
+  exit 1
+fi
+
+sed -i.bak -E \
+  's#528081867341\.dkr\.ecr\.eu-central-1\.amazonaws\.com/amenotejikara@sha256:[0-9a-f]{64}#amenotejikara-ci:test#' \
+  "${amenotejikara_deployment_file}"
+sed -i.bak 's/imagePullPolicy: IfNotPresent/imagePullPolicy: Never/' \
+  "${amenotejikara_deployment_file}"
+sed -i.bak \
+  '/^      imagePullSecrets:$/,/^      containers:$/ { /^      containers:$/!d; }' \
+  "${amenotejikara_deployment_file}"
+rm -f "${amenotejikara_deployment_file}.bak"
+if [[ "$(grep -Fc 'amenotejikara-ci:test' \
+    "${amenotejikara_deployment_file}")" != "1" ]] || \
+    ! grep -Fq 'imagePullPolicy: Never' \
+      "${amenotejikara_deployment_file}" || \
+    grep -Fq 'imagePullSecrets:' "${amenotejikara_deployment_file}"; then
+  printf 'Could not prepare the Amenotejikara controller manifest for kind.\n' \
+    >&2
+  exit 1
+fi
+
+sed -i.bak 's/^  replicas: 2$/  replicas: 1/' \
+  "${kurama_scenario_file}"
+sed -i.bak 's/^  suspend: false$/  suspend: true/' \
+  "${kurama_scenario_file}"
+sed -i.bak '0,/^    type: redis$/s//    type: memory/' \
+  "${kurama_scenario_file}"
+sed -i.bak '0,/^      type: uniform$/s//      type: fixed/' \
+  "${kurama_scenario_file}"
+sed -i.bak \
+  's/^      minRequestsPerMinute: 2$/      requestsPerMinute: 30/' \
+  "${kurama_scenario_file}"
+sed -i.bak -E \
+  '/^      (maxRequestsPerMinute|windowMinutes):/d' \
+  "${kurama_scenario_file}"
+sed -i.bak '0,/^      type: redis$/s//      type: local/' \
+  "${kurama_scenario_file}"
+rm -f "${kurama_scenario_file}.bak"
+grep -Fxq '  replicas: 1' "${kurama_scenario_file}"
+grep -Fxq '  suspend: true' "${kurama_scenario_file}"
+grep -Fxq '    type: memory' "${kurama_scenario_file}"
+grep -Fxq '      type: fixed' "${kurama_scenario_file}"
+grep -Fxq '      requestsPerMinute: 30' "${kurama_scenario_file}"
+if grep -Eq '^      (minRequestsPerMinute|maxRequestsPerMinute|windowMinutes):' \
+    "${kurama_scenario_file}"; then
+  printf 'Could not prepare the Kurama fixed schedule for kind.\n' >&2
+  exit 1
+fi
+grep -Fxq '      type: local' "${kurama_scenario_file}"
+
+gitops_harness_commit "Install controllers for restart lifecycle test"
+refresh_gitops_apps
+gitops_wait_application_revision kurama "${GITOPS_TEST_REVISION}"
+gitops_wait_application_revision amenotejikara "${GITOPS_TEST_REVISION}"
+
+printf 'Creating the Amenotejikara CR after its CRD is established...\n'
+sed -i.bak \
+  '/^  credentialRotation:$/,/^[^ ]/ s/^    enabled: false$/    enabled: true\
+    pendingSecretName: postgres-credentials/' \
+  "${values_file}"
+rm -f "${values_file}.bak"
+grep -Fxq '    enabled: true' "${values_file}"
+grep -Fxq '    pendingSecretName: postgres-credentials' "${values_file}"
+gitops_harness_commit "Create controller restart lifecycle CRs"
+refresh_gitops_apps
+gitops_refresh_application kurama
+gitops_refresh_application amenotejikara
+run_gitops_test "${gitops_controller_restart_test_dir}" \
+  gitops-controller-restart-junit \
+  "revision=${GITOPS_TEST_REVISION}"
 
 # Restore Terraform's declared root source before checking its convergence.
 printf 'Restoring the root Application to the pinned source revision...\n'

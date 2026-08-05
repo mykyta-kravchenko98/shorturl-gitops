@@ -1,4 +1,4 @@
-{{- if not .Values.ci.enabled }}
+{{- if or (not .Values.ci.enabled) .Values.ci.controllersEnabled }}
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
