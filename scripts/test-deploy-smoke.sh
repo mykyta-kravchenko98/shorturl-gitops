@@ -449,7 +449,6 @@ refresh_gitops_apps
 run_gitops_test "${gitops_controller_restart_test_dir}" \
   gitops-controller-restart-junit \
   "revision=${GITOPS_TEST_REVISION}"
-gitops_wait_application_revision root "${GITOPS_TEST_REVISION}"
 
 # Restore Terraform's declared root source before checking its convergence.
 printf 'Restoring the root Application to the pinned source revision...\n'

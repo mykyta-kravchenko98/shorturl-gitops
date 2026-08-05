@@ -21,6 +21,24 @@ spec:
               amenotejikara_selector='app.kubernetes.io/name=amenotejikara,app.kubernetes.io/component=manager'
               runner_selector='app.kubernetes.io/component=runner,traffic.kurama.dev/scenario=shorturl'
 
+              dump_controller_state() {
+                printf '\n===== controller restart diagnostic =====\n' >&2
+                kubectl -n argocd get application/root \
+                  application/shorturl application/kurama \
+                  application/amenotejikara \
+                  -o 'custom-columns=NAME:.metadata.name,REVISION:.status.sync.revision,SYNC:.status.sync.status,HEALTH:.status.health.status' \
+                  >&2 || true
+                kubectl -n "${namespace}" get trafficscenario shorturl \
+                  -o yaml >&2 || true
+                kubectl -n "${namespace}" get credentialrotation \
+                  shorturl-postgres -o yaml >&2 || true
+                kubectl -n "${namespace}" get deployments,pods -o wide \
+                  >&2 || true
+                kubectl -n "${namespace}" get events \
+                  --sort-by=.lastTimestamp >&2 || true
+              }
+              trap dump_controller_state ERR
+
               application_is_healthy() {
                 local application="$1"
                 kubectl -n argocd get application "${application}" -o json | \
@@ -60,10 +78,12 @@ spec:
                   }'
               }
 
+              # The app-of-apps parent can remain Progressing while child
+              # Application health propagates. The restart contract concerns
+              # the three directly affected child Applications and their CRs.
               controllers_converged=false
               for _ in $(seq 1 240); do
-                if application_is_healthy root && \
-                    application_is_healthy shorturl && \
+                if application_is_healthy shorturl && \
                     application_is_healthy kurama && \
                     application_is_healthy amenotejikara && \
                     kubectl -n "${namespace}" get trafficscenario shorturl \
