@@ -19,7 +19,6 @@ spec:
               namespace=shorturl
               kurama_selector='app.kubernetes.io/name=kurama,app.kubernetes.io/component=manager'
               amenotejikara_selector='app.kubernetes.io/name=amenotejikara,app.kubernetes.io/component=manager'
-              runner_selector='app.kubernetes.io/component=runner,traffic.kurama.dev/scenario=shorturl'
 
               dump_controller_state() {
                 printf '\n===== controller restart diagnostic =====\n' >&2
@@ -88,7 +87,8 @@ spec:
                     application_is_healthy amenotejikara && \
                     kubectl -n "${namespace}" get trafficscenario shorturl \
                       -o json | jq -e '
-                        .status.phase == "Ready" and
+                        .spec.suspend == true and
+                        .status.phase == "Suspended" and
                         .status.observedGeneration == .metadata.generation
                       ' >/dev/null && \
                     kubectl -n "${namespace}" get credentialrotation \
@@ -96,11 +96,8 @@ spec:
                         .status.phase == "InSync" and
                         .status.observedGeneration == .metadata.generation
                       ' >/dev/null && \
-                    kubectl -n "${namespace}" get deployment shorturl-runner \
-                      -o json | jq -e '
-                        .status.readyReplicas == 1 and
-                        .status.availableReplicas == 1
-                      ' >/dev/null && \
+                    ! kubectl -n "${namespace}" get deployment \
+                      shorturl-runner >/dev/null 2>&1 && \
                     controller_pod_uid "${kurama_selector}" >/dev/null && \
                     controller_pod_uid "${amenotejikara_selector}" \
                       >/dev/null; then
@@ -118,15 +115,6 @@ spec:
                 "${kurama_selector}")"
               amenotejikara_controller_before="$(controller_pod_uid \
                 "${amenotejikara_selector}")"
-              runner_deployment_uid="$(kubectl -n "${namespace}" get \
-                deployment shorturl-runner -o jsonpath='{.metadata.uid}')"
-              runner_config_uid="$(kubectl -n "${namespace}" get configmap \
-                shorturl-runner -o jsonpath='{.metadata.uid}')"
-              runner_pods_before="$(kubectl -n "${namespace}" get pods \
-                --selector "${runner_selector}" -o json | jq -er '
-                  select(.items | length == 1)
-                  | .items[0].metadata.uid
-                ')"
               shorturl_deployment_uid="$(kubectl -n "${namespace}" get \
                 deployment shorturl -o jsonpath='{.metadata.uid}')"
 
@@ -160,28 +148,14 @@ spec:
                 kurama_cr_after="$(cr_snapshot trafficscenario shorturl)"
                 amenotejikara_cr_after="$(cr_snapshot credentialrotation \
                   shorturl-postgres)"
-                current_runner_pods="$(kubectl -n "${namespace}" get pods \
-                  --selector "${runner_selector}" -o json | jq -r '
-                    [.items[].metadata.uid] | sort | join(":")
-                  ')"
                 if [[ "${kurama_cr_after}" == "${kurama_cr_before}" &&
                       "${amenotejikara_cr_after}" == \
                         "${amenotejikara_cr_before}" &&
-                      "$(kubectl -n "${namespace}" get deployment \
-                        shorturl-runner -o jsonpath='{.metadata.uid}')" == \
-                        "${runner_deployment_uid}" &&
-                      "$(kubectl -n "${namespace}" get configmap \
-                        shorturl-runner -o jsonpath='{.metadata.uid}')" == \
-                        "${runner_config_uid}" &&
-                      "${current_runner_pods}" == "${runner_pods_before}" &&
                       "$(kubectl -n "${namespace}" get deployment shorturl \
                         -o jsonpath='{.metadata.uid}')" == \
                         "${shorturl_deployment_uid}" ]] && \
-                    kubectl -n "${namespace}" get deployment shorturl-runner \
-                      -o json | jq -e '
-                        .status.readyReplicas == 1 and
-                        .status.availableReplicas == 1
-                      ' >/dev/null && \
+                    ! kubectl -n "${namespace}" get deployment \
+                      shorturl-runner >/dev/null 2>&1 && \
                     kubectl -n "${namespace}" get deployment shorturl \
                       -o json | jq -e '
                         .status.readyReplicas == 2 and

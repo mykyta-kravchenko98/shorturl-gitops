@@ -422,6 +422,8 @@ fi
 
 sed -i.bak 's/^  replicas: 2$/  replicas: 1/' \
   "${kurama_scenario_file}"
+sed -i.bak 's/^  suspend: false$/  suspend: true/' \
+  "${kurama_scenario_file}"
 sed -i.bak '0,/^    type: redis$/s//    type: memory/' \
   "${kurama_scenario_file}"
 sed -i.bak '0,/^      type: uniform$/s//      type: fixed/' \
@@ -436,6 +438,7 @@ sed -i.bak '0,/^      type: redis$/s//      type: local/' \
   "${kurama_scenario_file}"
 rm -f "${kurama_scenario_file}.bak"
 grep -Fxq '  replicas: 1' "${kurama_scenario_file}"
+grep -Fxq '  suspend: true' "${kurama_scenario_file}"
 grep -Fxq '    type: memory' "${kurama_scenario_file}"
 grep -Fxq '      type: fixed' "${kurama_scenario_file}"
 grep -Fxq '      requestsPerMinute: 30' "${kurama_scenario_file}"

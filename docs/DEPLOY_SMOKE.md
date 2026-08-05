@@ -32,7 +32,7 @@ working digest and two replicas
   -> API-rejected ConfigMap and controlled SyncFailed
   -> remove the broken manifest and recover
   -> install locally built Kurama and Amenotejikara controllers
-  -> restart both controller Pods and preserve CR/workload state
+  -> restart both controller Pods and preserve reconciled CR state
 ```
 
 While the mutable revision is active, the test also patches the live Deployment
@@ -70,8 +70,8 @@ The assertions cover:
 - an API-rejected manifest producing a `SyncFailed` operation while the current
   Deployment and HTTP endpoint remain healthy, followed by a recovery commit;
 - deletion and recreation of the Kurama and Amenotejikara controller Pods
-  preserving both CR `spec`/`status`, the CR UIDs, and the UIDs and readiness of
-  their managed workloads;
+  preserving both CR `spec`/`status`, the CR UIDs, the suspended Kurama state,
+  and the UID and readiness of the ShortUrl workload;
 - an empty convergence plan followed by a second successful Terraform apply.
 
 The `EXIT`, `INT`, and `TERM` handlers always run `terraform destroy`. If destroy
