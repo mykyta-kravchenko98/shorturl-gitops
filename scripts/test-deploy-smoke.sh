@@ -381,6 +381,16 @@ sed -i.bak \
 rm -f "${app_values_file}.bak"
 grep -Fxq '  controllersEnabled: true' "${app_values_file}"
 
+sed -i.bak \
+  '/^kurama:$/,/^[^ ]/ s/^    enabled: true$/    enabled: false/' \
+  "${app_values_file}"
+rm -f "${app_values_file}.bak"
+if ! sed -n '/^kurama:$/,/^[^ ]/p' "${app_values_file}" | \
+    grep -Fxq '    enabled: false'; then
+  printf 'Could not disable the Kurama ExternalSecret for kind.\n' >&2
+  exit 1
+fi
+
 sed -i.bak -E \
   's#528081867341\.dkr\.ecr\.eu-central-1\.amazonaws\.com/kurama@sha256:[0-9a-f]{64}#kurama-ci:test#g' \
   "${kurama_deployment_file}"

@@ -81,6 +81,7 @@ helm template root "${app_of_apps_chart}" \
   --kube-version "${KUBERNETES_VERSION}" \
   --set ci.enabled=true \
   --set ci.controllersEnabled=true \
+  --set kurama.externalSecret.enabled=false \
   >"${render_dir}/app-of-apps-controller-ci.yaml"
 controller_ci_apps="$(awk '
   $1 == "kind:" && $2 == "Application" { application = 1; next }
@@ -90,6 +91,19 @@ if [[ "${controller_ci_apps}" != \
     "amenotejikara,kurama,namespaces,shorturl" ]]; then
   printf 'Unexpected controller CI Applications: %s\n' \
     "${controller_ci_apps}" >&2
+  exit 1
+fi
+
+if ! grep -Fq '$patch: delete' \
+    "${render_dir}/app-of-apps-controller-ci.yaml" || \
+    ! grep -Fq 'name: shorturl-api-auth' \
+      "${render_dir}/app-of-apps-controller-ci.yaml"; then
+  printf 'Kurama ExternalSecret delete patch is missing from CI profile\n' >&2
+  exit 1
+fi
+
+if grep -Fq '$patch: delete' "${render_dir}/app-of-apps.yaml"; then
+  printf 'Kurama ExternalSecret is unexpectedly disabled by default\n' >&2
   exit 1
 fi
 
