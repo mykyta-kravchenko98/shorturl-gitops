@@ -59,12 +59,12 @@
                     "additionalProperties": {
                       "type": "string"
                     },
-                    "description": "Literal sensitive headers are forbidden until SecretRef-backed authentication is supported.",
+                    "description": "Known credential-bearing headers cannot be set literally; use\nSecretHeaders for those values.",
                     "maxProperties": 64,
                     "type": "object",
                     "x-kubernetes-validations": [
                       {
-                        "message": "literal sensitive headers are forbidden; use SecretRef support when it becomes available",
+                        "message": "literal sensitive headers are forbidden; use secretHeaders",
                         "rule": "self.all(key, !key.lowerAscii().matches('^(authorization|proxy-authorization|cookie|set-cookie|x-api-key)$'))"
                       }
                     ]
@@ -79,6 +79,57 @@
                   "pathTemplate": {
                     "minLength": 1,
                     "type": "string"
+                  },
+                  "secretHeaders": {
+                    "description": "SecretHeaders reads header values from Kubernetes Secrets in the same\nnamespace. Secret values are projected into the runner Pod and are not\nstored in the TrafficScenario or generated ConfigMap.",
+                    "items": {
+                      "description": "SecretHeaderSpec sets an HTTP header from a Kubernetes Secret. Use this for\nauthorization tokens and other credentials instead of literal headers.",
+                      "properties": {
+                        "name": {
+                          "maxLength": 256,
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "valueFrom": {
+                          "properties": {
+                            "secretKeyRef": {
+                              "description": "SecretKeySelector identifies one key in a Kubernetes Secret in the same\nnamespace as the TrafficScenario. The secret value is mounted by kubelet;\nit is never copied into the runner ConfigMap.",
+                              "properties": {
+                                "key": {
+                                  "maxLength": 253,
+                                  "pattern": "^[-._a-zA-Z0-9]+$",
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "maxLength": 253,
+                                  "pattern": "^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "key",
+                                "name"
+                              ],
+                              "type": "object",
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "secretKeyRef"
+                          ],
+                          "type": "object",
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "name",
+                        "valueFrom"
+                      ],
+                      "type": "object",
+                      "additionalProperties": false
+                    },
+                    "maxItems": 64,
+                    "type": "array"
                   },
                   "variables": {
                     "items": {
