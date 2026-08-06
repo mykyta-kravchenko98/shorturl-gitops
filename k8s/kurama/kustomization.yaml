@@ -7,4 +7,5 @@ resources:
   - crd.yaml
   - rbac.yaml
   - deployment.yaml
+  - shorturl-api-auth-external-secret.yaml
   - shorturl-scenario.yaml
