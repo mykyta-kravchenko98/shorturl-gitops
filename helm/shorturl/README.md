@@ -15,6 +15,7 @@ database, credential, registry, and observability integrations.
 | `secretsManagement.credentialRotation.enabled` | CredentialRotation |
 | `imagePullSecret.enabled` | Attach an existing pull Secret to workload Pods |
 | `ecrRefresh.enabled` | ECR refresh RBAC, seed Job, and CronJob |
+| `cache.capacity` | Maximum number of entries in the application LRU cache |
 | `otel.sidecar.enabled` | OpenTelemetry sidecar and its ConfigMap |
 
 The default values preserve the local AWS-backed deployment. A minimal

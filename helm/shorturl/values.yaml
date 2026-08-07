@@ -111,6 +111,8 @@ server:
   restPort: "8585"
   dataCenterId: 1
   machineId: 1
+cache:
+  capacity: 3500
 ingress:
   enabled: false
   host: shorturl.local

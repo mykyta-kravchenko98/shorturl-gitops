@@ -5,6 +5,18 @@ templates:
   - templates/otel-sidecar-config.yaml
   - templates/postgres-statefulset.yaml
 tests:
+  - it: configures the application cache capacity
+    set:
+      cache.capacity: 3500
+      otel.sidecar.enabled: false
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: CACHE_CAPACITY
+            value: "3500"
+        template: templates/deployment.yaml
+
   - it: omits the Ingress when disabled
     set:
       ingress.enabled: false
