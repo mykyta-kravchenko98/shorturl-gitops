@@ -219,6 +219,44 @@ OpenTelemetry Collector gateway
 Pod logs ──► Promtail ──► Loki
 ```
 
+### Operational snapshots
+
+The following Grafana snapshots were captured from a running local cluster
+while Kurama was generating variable-rate traffic against ShortURL. They
+illustrate the observable system behaviour; they are not intended as formal
+performance benchmarks.
+
+#### Kurama traffic generation
+
+Kurama exposes permit efficiency, burst sizing, selected request rate, limiter
+decisions, store throughput, and Redis latency.
+
+![Kurama Grafana dashboard showing traffic generation and rate-limiter behaviour](docs/grafana-kurama-dashboard.png)
+
+#### ShortURL traffic and latency
+
+The ShortURL dashboard correlates total traffic with individual API operations,
+server error ratio, and response-time percentiles.
+
+![ShortURL Grafana dashboard showing API traffic, operations, errors, and latency](docs/grafana-shortUrl-dashboard-1.png)
+
+#### ShortURL cache warm-up
+
+This snapshot was taken shortly after increasing the ShortURL LRU capacity from
+100 to 3500 entries. Most Kurama lookups were still cache misses because the
+newly enlarged cache had not yet accumulated enough of the active key set.
+
+![ShortURL Grafana dashboard during LRU cache warm-up, with a 2.13 percent hit ratio](docs/grafana-shortUrl-dashboard-2.png)
+
+#### ShortURL cache after warm-up
+
+Later in the same workload, with the ShortURL LRU capacity set to 3500 and the
+Kurama hash store capacity set to 10000, the observed cache hit ratio increased
+to 27.3%. The comparison demonstrates the warm-up effect under the generated
+working set rather than claiming a general performance benchmark.
+
+![ShortURL Grafana dashboard after cache warm-up, with a 27.3 percent hit ratio](docs/grafana-shortUrl-dashboard-3.png)
+
 ## GitOps Workflow
 
 To change the deployment configuration:
