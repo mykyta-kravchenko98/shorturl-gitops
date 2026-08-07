@@ -6,6 +6,7 @@ name: PR Lint
 on:
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   static-gate:
@@ -55,3 +56,11 @@ jobs:
           VALIDATE_ALL_CODEBASE: false   # only lint files changed in the PR
           DEFAULT_BRANCH: main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  deploy-smoke:
+    needs:
+      - static-gate
+      - megalinter
+    permissions:
+      contents: read
+    uses: ./.github/workflows/deploy-smoke.yml

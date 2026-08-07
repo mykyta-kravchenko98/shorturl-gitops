@@ -94,7 +94,7 @@ if [[ "${controller_ci_apps}" != \
   exit 1
 fi
 
-if ! grep -Fq '$patch: delete' \
+if ! grep -Fq "\$patch: delete" \
     "${render_dir}/app-of-apps-controller-ci.yaml" || \
     ! grep -Fq 'name: shorturl-api-auth' \
       "${render_dir}/app-of-apps-controller-ci.yaml"; then
@@ -102,7 +102,7 @@ if ! grep -Fq '$patch: delete' \
   exit 1
 fi
 
-if grep -Fq '$patch: delete' "${render_dir}/app-of-apps.yaml"; then
+if grep -Fq "\$patch: delete" "${render_dir}/app-of-apps.yaml"; then
   printf 'Kurama ExternalSecret is unexpectedly disabled by default\n' >&2
   exit 1
 fi
