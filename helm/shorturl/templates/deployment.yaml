@@ -59,6 +59,8 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            - name: CACHE_CAPACITY
+              value: {{ required "cache.capacity must be a positive integer" .Values.cache.capacity | quote }}
           envFrom:
             - secretRef:
                 name: {{ .Values.postgres.credentials.secretName }}
