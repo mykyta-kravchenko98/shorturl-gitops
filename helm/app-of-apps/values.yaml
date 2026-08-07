@@ -5,6 +5,10 @@ git:
 shorturl:
   valuesFile: values-local.yaml
 
+kurama:
+  externalSecret:
+    enabled: true
+
 ci:
   enabled: false
   controllersEnabled: false

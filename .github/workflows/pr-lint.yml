@@ -6,6 +6,7 @@ name: PR Lint
 on:
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   static-gate:
@@ -50,8 +51,16 @@ jobs:
           persist-credentials: false
 
       - name: MegaLinter
-        uses: oxsecurity/megalinter/flavors/terraform@e08c2b05e3dbc40af4c23f41172ef1e068a7d651 # v8
+        uses: docker://ghcr.io/oxsecurity/megalinter-terraform@sha256:ad91bff2c7d870c6a29863080d610127efb0561b8a8f2366454d2d939546aa77 # v8.8.0
         env:
           VALIDATE_ALL_CODEBASE: false   # only lint files changed in the PR
           DEFAULT_BRANCH: main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  deploy-smoke:
+    needs:
+      - static-gate
+      - megalinter
+    permissions:
+      contents: read
+    uses: ./.github/workflows/deploy-smoke.yml

@@ -14,6 +14,21 @@ spec:
     repoURL: {{ .Values.git.repoURL | quote }}
     targetRevision: {{ .Values.git.targetRevision | quote }}
     path: k8s/kurama
+    {{- if not .Values.kurama.externalSecret.enabled }}
+    kustomize:
+      patches:
+        - target:
+            group: external-secrets.io
+            version: v1
+            kind: ExternalSecret
+            name: shorturl-api-auth
+          patch: |-
+            $patch: delete
+            apiVersion: external-secrets.io/v1
+            kind: ExternalSecret
+            metadata:
+              name: shorturl-api-auth
+    {{- end }}
   destination:
     server: https://kubernetes.default.svc
     namespace: shorturl

@@ -66,6 +66,28 @@ shorturl_pod_uids() {
     '
 }
 
+terraform_init_with_retry() {
+  local attempt
+  local max_attempts=3
+
+  for attempt in $(seq 1 "${max_attempts}"); do
+    if terraform -chdir="${fixture_dir}" init -input=false; then
+      return 0
+    fi
+
+    if ((attempt == max_attempts)); then
+      break
+    fi
+
+    printf 'Terraform init failed on attempt %d/%d; retrying in %d seconds...\n' \
+      "${attempt}" "${max_attempts}" "$((attempt * 5))" >&2
+    sleep "$((attempt * 5))"
+  done
+
+  printf 'Terraform init failed after %d attempts.\n' "${max_attempts}" >&2
+  return 1
+}
+
 : "${GITOPS_REPO_URL:?GITOPS_REPO_URL must be the clone URL Argo CD can read}"
 : "${TARGET_REVISION:?TARGET_REVISION must be a commit SHA Argo CD can fetch}"
 : "${SHORTURL_SOURCE_DIR:?SHORTURL_SOURCE_DIR must point to the ShortUrl source checkout}"
@@ -209,7 +231,7 @@ docker build --tag kurama-ci:test "${KURAMA_SOURCE_DIR}"
 docker build --tag amenotejikara-ci:test "${AMENOTEJIKARA_SOURCE_DIR}"
 
 printf 'Applying Terraform fixture for cluster %s...\n' "${cluster_name}"
-terraform -chdir="${fixture_dir}" init -input=false
+terraform_init_with_retry
 terraform_ready=true
 terraform -chdir="${fixture_dir}" apply -auto-approve -input=false \
   -var="cluster_name=${cluster_name}" \
@@ -380,6 +402,16 @@ sed -i.bak \
   "${app_values_file}"
 rm -f "${app_values_file}.bak"
 grep -Fxq '  controllersEnabled: true' "${app_values_file}"
+
+sed -i.bak \
+  '/^kurama:$/,/^[^ ]/ s/^    enabled: true$/    enabled: false/' \
+  "${app_values_file}"
+rm -f "${app_values_file}.bak"
+if ! sed -n '/^kurama:$/,/^[^ ]/p' "${app_values_file}" | \
+    grep -Fxq '    enabled: false'; then
+  printf 'Could not disable the Kurama ExternalSecret for kind.\n' >&2
+  exit 1
+fi
 
 sed -i.bak -E \
   's#528081867341\.dkr\.ecr\.eu-central-1\.amazonaws\.com/kurama@sha256:[0-9a-f]{64}#kurama-ci:test#g' \
