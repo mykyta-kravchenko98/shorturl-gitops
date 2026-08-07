@@ -55,6 +55,9 @@ is intended only for disposable environments with non-sensitive credentials.
 Separating
 `imagePullSecret.enabled` from `ecrRefresh.enabled` also allows a platform to
 provide a pull Secret without granting the chart permission to refresh it.
+The default CronJob refreshes the ECR token hourly, replaces a stale active
+refresh after cluster downtime, and limits each attempt to
+`ecrRefresh.activeDeadlineSeconds`.
 
 The `values-ci.yaml` profile sets the shared `imageVersion` to `test`, producing
 images named `shorturl-ci:test` and `shorturl-migrate-ci:test` with pull policy

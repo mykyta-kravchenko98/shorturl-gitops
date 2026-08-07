@@ -3,6 +3,7 @@ templates:
   - templates/ecr-refresh-rbac.yaml
   - templates/ecr-refresh-script-configmap.yaml
   - templates/ecr-refresh-seed-job.yaml
+  - templates/ecr-refresh-cronjob.yaml
   - templates/postgres-migrate-job.yaml
 tests:
   - it: creates ECR dependencies at weight minus twenty
@@ -81,6 +82,23 @@ tests:
           value: 300
         template: templates/ecr-refresh-seed-job.yaml
 
+  - it: replaces stale scheduled refresh jobs and bounds their runtime
+    set:
+      ecrRefresh.enabled: true
+    asserts:
+      - equal:
+          path: spec.schedule
+          value: "0 * * * *"
+        template: templates/ecr-refresh-cronjob.yaml
+      - equal:
+          path: spec.concurrencyPolicy
+          value: Replace
+        template: templates/ecr-refresh-cronjob.yaml
+      - equal:
+          path: spec.jobTemplate.spec.activeDeadlineSeconds
+          value: 300
+        template: templates/ecr-refresh-cronjob.yaml
+
   - it: runs migrations after install or upgrade and cleans the Job up
     set:
       postgres.migrations.enabled: true
@@ -116,6 +134,9 @@ tests:
       - hasDocuments:
           count: 0
         template: templates/ecr-refresh-seed-job.yaml
+      - hasDocuments:
+          count: 0
+        template: templates/ecr-refresh-cronjob.yaml
       - hasDocuments:
           count: 0
         template: templates/postgres-migrate-job.yaml

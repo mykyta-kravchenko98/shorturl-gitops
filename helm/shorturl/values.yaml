@@ -101,7 +101,7 @@ ecrRefresh:
   registry: 528081867341.dkr.ecr.eu-central-1.amazonaws.com
   secretName: ecr-pull-secret
   credentialsSecretName: aws-ecr-credentials
-  schedule: "0 */10 * * *"
+  schedule: "0 * * * *"
   kubectl:
     version: v1.31.14
     sha256: 8791ec7c8966b61420d55103a5fb948de9f0ca3d7306d789734975ad9704bdb0

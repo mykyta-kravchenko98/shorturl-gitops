@@ -11,11 +11,14 @@ metadata:
     {{- include "shorturl.labels" . | nindent 4 }}
 spec:
   schedule: {{ .Values.ecrRefresh.schedule | quote }}
-  concurrencyPolicy: Forbid
+  # Replace a stale refresh after a long cluster shutdown instead of allowing
+  # it to block all subsequent ECR token rotations.
+  concurrencyPolicy: Replace
   successfulJobsHistoryLimit: 1
   failedJobsHistoryLimit: 3
   jobTemplate:
     spec:
+      activeDeadlineSeconds: {{ .Values.ecrRefresh.activeDeadlineSeconds }}
       backoffLimit: 3
       template:
         metadata:
