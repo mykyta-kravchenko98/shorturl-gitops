@@ -1,8 +1,8 @@
 replicaCount: 1
-imageVersion: 7d67a29fd78a05f7e111f71cd7763461fd244d45
+imageVersion: fdbdb81647bc20f1abd9de6bf33722d8dfd90b43
 image:
   repository: 528081867341.dkr.ecr.eu-central-1.amazonaws.com/shorturl
-  digest: "sha256:ee8b6fd668e81745cf33ac4208bfc6dc457a69dd89f62728d7406403994cec4f"
+  digest: "sha256:a5e8d49195c2e97d296ea254d703ee56c22d3fe1cae572a4e5ba3e32508c2525"
   pullPolicy: IfNotPresent
 service:
   port: 8585
@@ -73,7 +73,7 @@ postgres:
         memory: 64Mi
   migrateImage:
     repository: 528081867341.dkr.ecr.eu-central-1.amazonaws.com/shorturl-migrate
-    digest: "sha256:8ba65a28ff0ee330cc12b2353a8125020377d21e8c251e631319d43241e4261b"
+    digest: "sha256:ecf2558334b2375172c81456f46285b743de7401c4891affdd711fc81e199a51"
     pullPolicy: IfNotPresent
 secretsManagement:
   awsRegion: eu-central-1
